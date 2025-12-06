@@ -1,0 +1,6 @@
+[package]
+name = "nested_borrowing_and_references_from_structs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]

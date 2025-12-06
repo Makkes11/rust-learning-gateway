@@ -1,0 +1,2 @@
+Hallo Rust!
+Das ist Tag 10 :)
