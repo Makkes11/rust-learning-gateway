@@ -1,7 +1,7 @@
 # 🚀 Rust Learning Gateway
 
-Dieses Repository dokumentiert meine **Rust-Lernreise** mit praktischen Übungen, Mini-Projekten und einem kleinen IoT-Gateway-Projekt. Alle Übungen sind in **Tagesordnern** organisiert (`days/day01` bis `days/day29`).  
-Das Gateway-Projekt befindet sich im Ordner `gateway/`.
+Dieses Repository dokumentiert meine praktische Lernreise in Rust – bestehend aus täglichen Übungen (jeweils in eigenen Tagesordnern) und einem wachsenden Mini-IoT-Gateway-Projekt.  
+Alle Übungen finden sich im Ordner `days/`, das Hauptprojekt liegt unter `gateway/`.
 
 
 ## 📂 Projektstruktur
@@ -22,7 +22,7 @@ rust-learning-gateway/
 
 ```
 
-## 📚 Übungen
+## 📚 Übersicht der Übungstage
 
 | Tag | Projekt / Übung | Kurzbeschreibung |
 |-----|-----------------|-----------------|
@@ -59,9 +59,9 @@ rust-learning-gateway/
 ---
 
 
-## 🌐 Gateway Projekt
+## 🌐 Mini IoT-Gateway
 
-Im Ordner `gateway/` befindet sich ein **Mini IoT-Gateway**, das Sensordaten verarbeitet, Events behandelt und den Status von Devices verwaltet.
+Im Ordner `gateway/` entsteht ein kleines Industrial/IoT-Gateway, das Sensordaten als Events verarbeitet, einen internen Zustand hält und künftig um weitere Schnittstellen (REST, MQTT, Modbus, OPC UA) erweitert wird.
 
 ### 💻 Ausführen
 
@@ -72,17 +72,20 @@ cargo run
 
 ## ⚡ Features
 
-- Praxisnahe Rust-Übungen, sortiert nach Tagen
-- Mini IoT-Gateway als kleines Projekt zum Anwenden von Rust
-- Umfassende Beispiele zu Pattern Matching, Borrowing und Ownership
-- Fehlerbehandlung mit `Result` und `Option`
-- Jede Tagesübung als eigenständiges Cargo-Projekt
+- Sammlung praktischer Rust-Übungen von Grundlagen bis fortgeschrittenen Themen
+- Mini-IoT-Gateway zur Anwendung echter Backend- und IoT-Konzepte
+- Beispiele zu:
+  - Ownership & Borrowing
+  - Pattern Matching (einfach bis komplex)
+  - Fehlerbehandlung mit `Result` und `Option`
+  - Modularisierung und Strukturierung größerer Projekte
+- Jede Tagesübung als eigenständiges Cargo-Projekt ausführbar
+- Gateway-Projekt als Basis für weitere Integrationen (REST, MQTT, Modbus, OPC UA)
 
 ---
 
 ## 🔗 Hinweise
 
-- Dieses Repository ist **öffentlich**, ideal zur Dokumentation von Lernfortschritten
-- Jede Tagesübung ist eigenständig und kann separat getestet werden
-- Das Gateway-Projekt befindet sich im Ordner `gateway/` und kann direkt mit `cargo run` ausgeführt werden
-- Für detaillierte Infos zu den Übungen, siehe die Tagesordner `days/day01` bis `days/day29`
+- Dieses Repository ist **öffentlich** und dokumentiert kontinuierlichen Lernfortschritt.
+- Jede Tagesübung kann isoliert ausgeführt werden.
+- Das Gateway-Projekt wird iterativ erweitert (Async, REST, MQTT, Modbus, OPC UA).
