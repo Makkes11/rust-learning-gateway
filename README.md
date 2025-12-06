@@ -1,10 +1,12 @@
-# Rust Learning Gateway
+# 🚀 Rust Learning Gateway
 
-Dieses Repository dokumentiert meine Rust-Lernreise, inklusive Übungen, Mini-Projekten und einem eigenen kleinen IoT-Gateway. Ziel ist es, Rust-Konzepte praktisch zu erlernen und dabei sauberen, idiomatischen Code zu schreiben.
+Dieses Repository dokumentiert meine **Rust-Lernreise** mit praktischen Übungen, Mini-Projekten und einem kleinen IoT-Gateway-Projekt. Alle Übungen sind in **Tagesordnern** organisiert (`days/day01` bis `days/day29`).  
+Das Gateway-Projekt befindet sich im Ordner `gateway/`.
 
-Die Ordnerstruktur ist wie folgt:
 
---- 
+## 📂 Projektstruktur
+
+```
 
 rust-learning-gateway/
 │
@@ -18,9 +20,9 @@ rust-learning-gateway/
 │
 └── README.md
 
----
+```
 
-## Übersicht der Lern-Tage
+## 📚 Übungen
 
 | Tag | Projekt / Übung | Kurzbeschreibung |
 |-----|-----------------|-----------------|
@@ -56,24 +58,31 @@ rust-learning-gateway/
 
 ---
 
-## Hauptprojekt: `gateway`
 
-Der Ordner `gateway/` enthält mein kleines Mini-IoT-Gateway.  
-Hier werden die Rust-Konzepte aus den Übungs-Tagen praktisch angewendet.  
+## 🌐 Gateway Projekt
 
-- Kommunikation mit Devices simulieren  
-- Verarbeitung von Events und Sensor-Daten  
-- Fehler- und Statusbehandlung  
-- Pattern Matching, Borrowing und Ownership in realistischen Szenarien  
+Im Ordner `gateway/` befindet sich ein **Mini IoT-Gateway**, das Sensordaten verarbeitet, Events behandelt und den Status von Devices verwaltet.
+
+### 💻 Ausführen
+
+```bash
+cd gateway
+cargo run
+```
+
+## ⚡ Features
+
+- Praxisnahe Rust-Übungen, sortiert nach Tagen
+- Mini IoT-Gateway als kleines Projekt zum Anwenden von Rust
+- Umfassende Beispiele zu Pattern Matching, Borrowing und Ownership
+- Fehlerbehandlung mit `Result` und `Option`
+- Jede Tagesübung als eigenständiges Cargo-Projekt
 
 ---
 
-## Hinweise
+## 🔗 Hinweise
 
-- Jedes Tagesprojekt (`days/dayXX_*`) ist ein eigenständiges Cargo-Projekt (`cargo new`)  
-- Tests sind, wenn vorhanden, in `src/lib.rs` oder `tests/` enthalten  
-- Die Readme enthält nur kurze Beschreibungen; Details und Code sind in den jeweiligen Ordnern  
-
----
-
-> Dieses Repo zeigt meinen Lernprozess in Rust und dient gleichzeitig als Showcase für sauberen, idiomatischen Rust-Code.
+- Dieses Repository ist **öffentlich**, ideal zur Dokumentation von Lernfortschritten und als **Referenz für Bewerbungen**
+- Jede Tagesübung ist eigenständig und kann separat getestet werden
+- Das Gateway-Projekt befindet sich im Ordner `gateway/` und kann direkt mit `cargo run` ausgeführt werden
+- Für detaillierte Infos zu den Übungen, siehe die Tagesordner `days/day01` bis `days/day29`
