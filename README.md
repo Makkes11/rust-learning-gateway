@@ -82,7 +82,7 @@ cargo run
 
 ## 🔗 Hinweise
 
-- Dieses Repository ist **öffentlich**, ideal zur Dokumentation von Lernfortschritten und als **Referenz für Bewerbungen**
+- Dieses Repository ist **öffentlich**, ideal zur Dokumentation von Lernfortschritten
 - Jede Tagesübung ist eigenständig und kann separat getestet werden
 - Das Gateway-Projekt befindet sich im Ordner `gateway/` und kann direkt mit `cargo run` ausgeführt werden
 - Für detaillierte Infos zu den Übungen, siehe die Tagesordner `days/day01` bis `days/day29`
