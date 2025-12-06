@@ -1,4 +1,4 @@
-# Rust Learning Journey 🚀
+# Rust Learning Journey
 
 Dieses Repository dokumentiert meine Rust-Übungs- und Lernprojekte.  
 Jeder Tag ist ein eigenständiges Projekt oder eine Übung, in chronologischer Reihenfolge.
