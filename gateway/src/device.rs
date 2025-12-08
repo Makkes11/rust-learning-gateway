@@ -1,4 +1,6 @@
-#[derive(Debug)]
+use serde::Serialize;
+
+#[derive(Debug, Serialize, Clone)]
 pub struct Device {
     pub id: u32,
     pub value: i32,
@@ -10,16 +12,14 @@ pub enum GatewayEvent {
     Remove(u32),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct GatewayState {
     pub devices: Vec<Device>,
 }
 
 impl GatewayState {
     pub fn new() -> Self {
-        Self {
-            devices: Vec::new(),
-        }
+        Self { devices: vec![] }
     }
 
     pub fn apply_event(&mut self, ev: GatewayEvent) {

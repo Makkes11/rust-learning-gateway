@@ -1,29 +1,32 @@
+use axum::Json;
+use axum::extract::State;
+use axum::{Router, routing::get};
+use device::Device;
+use std::sync::{Arc, Mutex};
+
 mod device;
 
-use device::{GatewayEvent, GatewayState};
-use tokio::time::Duration;
+use device::GatewayState;
 
 #[tokio::main]
 async fn main() {
-    let mut gateway = GatewayState::new();
+    let state = Arc::new(Mutex::new(GatewayState::new()));
 
-    // initialize two devices
-    gateway.apply_event(GatewayEvent::Update { id: 1, value: 0 });
-    gateway.apply_event(GatewayEvent::Update { id: 2, value: 0 });
+    // router
+    let app = Router::new()
+        .route("/devices", get(get_devices))
+        .with_state(state);
 
-    // simulate device updates async
-    let mut interval = tokio::time::interval(Duration::from_secs(1));
-    for _ in 0..5 {
-        interval.tick().await;
-        // Werte ändern
-        gateway.apply_event(GatewayEvent::Update {
-            id: 1,
-            value: rand::random::<i32>() % 100,
-        });
-        gateway.apply_event(GatewayEvent::Update {
-            id: 2,
-            value: rand::random::<i32>() % 100,
-        });
-        println!("{:?}", gateway);
-    }
+    println!("Server running on http://127.0.0.1:3000");
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+        .await
+        .unwrap();
+
+    axum::serve(listener, app).await.unwrap();
+}
+
+async fn get_devices(State(state): State<Arc<Mutex<GatewayState>>>) -> Json<Vec<Device>> {
+    let state = state.lock().unwrap();
+    Json(state.devices.clone())
 }
