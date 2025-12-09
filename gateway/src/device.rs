@@ -6,6 +6,12 @@ pub struct Device {
     pub value: i32,
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct DeviceInput {
+    pub id: u32,
+    pub value: i32,
+}
+
 #[derive(Debug)]
 pub enum GatewayEvent {
     Update { id: u32, value: i32 },
