@@ -16,6 +16,7 @@ pub struct DeviceInput {
 pub enum GatewayEvent {
     Update { id: u32, value: i32 },
     Remove(u32),
+    Tick(i32),
 }
 
 #[derive(Debug, Default)]
@@ -38,6 +39,9 @@ impl GatewayState {
                 }
             }
             GatewayEvent::Remove(id) => self.devices.retain(|d| d.id != id),
+            GatewayEvent::Tick(v) => {
+                self.devices.iter_mut().for_each(|d| d.value += v);
+            }
         }
     }
 }
