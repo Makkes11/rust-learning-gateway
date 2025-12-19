@@ -1,4 +1,7 @@
+use std::sync::{Arc, Mutex};
+
 use serde::Serialize;
+use tokio::sync::mpsc::Sender;
 
 #[derive(Debug, Serialize, Clone)]
 pub struct Device {
@@ -44,4 +47,10 @@ impl GatewayState {
             }
         }
     }
+}
+
+#[derive(Clone)]
+pub struct AppState {
+    pub tx: Sender<GatewayEvent>,
+    pub state: Arc<Mutex<GatewayState>>,
 }

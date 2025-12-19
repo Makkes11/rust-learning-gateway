@@ -10,13 +10,23 @@ mod device;
 
 use device::GatewayState;
 
-use crate::device::{DeviceInput, GatewayEvent};
+use crate::device::{AppState, DeviceInput, GatewayEvent};
 
 #[tokio::main]
 async fn main() {
-    let state = Arc::new(Mutex::new(GatewayState::new()));
-    let bg_state = Arc::clone(&state);
-    if let Ok(mut guard) = bg_state.lock() {
+    // mpsc::channel erzeugt:
+    // tx = Sender -> erzeugt Events
+    // rx = Receiver -> verarbeitet Events
+    let (tx, mut rx) = tokio::sync::mpsc::channel::<GatewayEvent>(32);
+
+    // Gemeinsamer State im RAM
+    // Arc = mehrere Tasks dürfen ihn "besitzen"
+    // Mutex = jeweils nur EIN Task darf ihn ändern
+    let shared_state = Arc::new(Mutex::new(GatewayState::new()));
+
+    // Optional: Startzustand setzen (direkt, ohne Events)
+    {
+        let mut guard = shared_state.lock().unwrap();
         guard.apply_event(GatewayEvent::Update {
             id: (1),
             value: (rand::random::<i32>() % 100),
@@ -26,20 +36,50 @@ async fn main() {
             value: (rand::random::<i32>() % 100),
         });
     }
+
+    // -------------------------
+    // EVENT-LOOP TASK
+    // -------------------------
+    // Dieser Task ist der EINZIGE Ort, an dem der State verändert wird.
+    let event_state = shared_state.clone();
+
     tokio::spawn(async move {
-        for _ in 0..10 {
-            tokio::time::sleep(Duration::from_millis(500)).await;
-            if let Ok(mut guard) = bg_state.lock() {
-                guard.apply_event(GatewayEvent::Tick(1));
-                println!("{:?}", guard.devices);
+        while let Some(event) = rx.recv().await {
+            if let Ok(mut state) = event_state.lock() {
+                state.apply_event(event);
+            } else {
+                eprintln!("Mutex poisoned");
             }
         }
     });
 
-    // router
+    // -------------------------
+    // BACKGROUND TICK TASK
+    // -------------------------
+    // Dieser Task erzeugt nur Events, er verändert nicht den State.
+    let tx2 = tx.clone();
+    tokio::spawn(async move {
+        for _ in 0..10 {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+
+            tx2.send(GatewayEvent::Tick(1))
+                .await
+                .expect("worker disappeared");
+        }
+    });
+
+    // AppState bündelt tx und shared_state
+    let app_state = AppState {
+        tx: tx.clone(),
+        state: shared_state.clone(),
+    };
+
+    // -------------------------
+    // ROUTER
+    // -------------------------
     let app = Router::new()
         .route("/devices", post(create_or_update_device).get(get_devices))
-        .with_state(state);
+        .with_state(app_state);
 
     println!("Server running on http://127.0.0.1:3000");
 
@@ -50,10 +90,9 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn get_devices(
-    State(state): State<Arc<Mutex<GatewayState>>>,
-) -> Result<Json<Vec<Device>>, StatusCode> {
-    let state = state
+async fn get_devices(State(app): State<AppState>) -> Result<Json<Vec<Device>>, StatusCode> {
+    let state = app
+        .state
         .lock()
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -61,17 +100,16 @@ async fn get_devices(
 }
 
 async fn create_or_update_device(
-    State(state): State<Arc<Mutex<GatewayState>>>,
+    State(app): State<AppState>,
     Json(payload): Json<DeviceInput>,
 ) -> Result<Json<Device>, StatusCode> {
-    let mut state = state
-        .lock()
+    app.tx
+        .send(GatewayEvent::Update {
+            id: payload.id,
+            value: payload.value,
+        })
+        .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    state.apply_event(GatewayEvent::Update {
-        id: payload.id,
-        value: payload.value,
-    });
 
     Ok(Json(Device {
         id: payload.id,
