@@ -1,8 +1,12 @@
 # 🚀 Rust Learning Gateway
 
-Dieses Repository dokumentiert meine praktische Lernreise in Rust – bestehend aus täglichen Übungen (jeweils in eigenen Tagesordnern) und einem wachsenden Mini-IoT-Gateway-Projekt.  
-Alle Übungen finden sich im Ordner `days/`, das Hauptprojekt liegt unter `gateway/`.
+**Rust lernen durch Bauen - von den Grundlagen bis zum produktionsreifen IoT-Gateway**
 
+Dieses Repository dokumentiert meinen Lernweg in Rust: 29 Tage Fundamentals durch tägliche Übungen, danach die Entwicklung eines echten Industrial IoT Gateways.
+
+**Hintergrund:** Ich komme aus TypeScript/Java und lerne Rust, um Backend- und Industrial-IoT-Projekte auf professionellem Level umzusetzen.
+
+---
 
 ## 📂 Projektstruktur
 
@@ -21,6 +25,11 @@ rust-learning-gateway/
 └── README.md
 
 ```
+
+
+**→ [Gateway Dokumentation ansehen](gateway/README.md)**
+
+---
 
 ## 📚 Übersicht der Übungstage
 
@@ -58,34 +67,56 @@ rust-learning-gateway/
 
 ---
 
+## 🌐 Industrial IoT Gateway (Hauptprojekt)
 
-## 🌐 Mini IoT-Gateway
+Ab Tag 30 arbeite ich am Gateway - ein event-getriebenes System für industrielle IoT-Anwendungen.
 
-Im Ordner `gateway/` entsteht ein kleines Industrial/IoT-Gateway, das Sensordaten als Events verarbeitet, einen internen Zustand hält und künftig um weitere Schnittstellen (REST, MQTT, Modbus, OPC UA) erweitert wird.
+**Aktueller Stand:**
+- ✅ Event-basierte Architektur (Single-Writer-Pattern)
+- ✅ REST API mit Axum
+- ✅ Async Runtime mit Tokio
+- ✅ Background-Tasks für Polling
+- ✅ Thread-sichere State-Verwaltung
 
-### 💻 Ausführen
+**Geplant:**
+- MQTT Publisher/Subscriber
+- Modbus TCP Client
+- OPC UA Adapter
+- Config-Management
+- Docker Deployment
 
+**→ [Vollständige Dokumentation und Architektur](gateway/README.md)**
+
+### 💻 Gateway starten
 ```bash
 cd gateway
 cargo run
+
+# Testen
+curl http://127.0.0.1:3000/devices
 ```
 
-## ⚡ Features
+---
 
-- Sammlung praktischer Rust-Übungen von Grundlagen bis fortgeschrittenen Themen
-- Mini-IoT-Gateway zur Anwendung echter Backend- und IoT-Konzepte
-- Beispiele zu:
+## ⚡ Was dieses Repo zeigt
+
+- **Tag 1-29:** Rust Fundamentals durch praktische Übungen
   - Ownership & Borrowing
   - Pattern Matching (einfach bis komplex)
   - Fehlerbehandlung mit `Result` und `Option`
-  - Modularisierung und Strukturierung größerer Projekte
-- Jede Tagesübung als eigenständiges Cargo-Projekt ausführbar
-- Gateway-Projekt als Basis für weitere Integrationen (REST, MQTT, Modbus, OPC UA)
+  - State Machines und komplexe Datenstrukturen
+  
+- **Ab Tag 30:** Produktionsreifes IoT-Gateway
+  - Event-driven Architecture
+  - Async Rust in der Praxis
+  - REST APIs und Background-Tasks
+  - Vorbereitung für Modbus/OPC-UA/MQTT
 
 ---
 
 ## 🔗 Hinweise
 
-- Dieses Repository ist **öffentlich** und dokumentiert kontinuierlichen Lernfortschritt.
-- Jede Tagesübung kann isoliert ausgeführt werden.
-- Das Gateway-Projekt wird iterativ erweitert (Async, REST, MQTT, Modbus, OPC UA).
+- Dieses Repository ist **öffentlich** und dokumentiert kontinuierlichen Lernfortschritt
+- Tages-Übungen (Tag 1-29) sind abgeschlossen und können einzeln ausgeführt werden
+- Gateway-Entwicklung läuft kontinuierlich weiter (ab Tag 30)
+- Jeder Commit zeigt echte Lernschritte - mit Fehlern, Refactorings und Verbesserungen
