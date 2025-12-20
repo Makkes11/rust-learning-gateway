@@ -1,25 +1,19 @@
-use axum::Json;
-use axum::extract::State;
-use axum::http::StatusCode;
 use axum::{Router, routing::post};
-use device::Device;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crate::mqtt::MqttPublisher;
-
+mod api;
 mod device;
 mod mqtt;
+mod state;
 
-use device::GatewayState;
-
-use crate::device::{AppState, DeviceInput, GatewayEvent};
+use crate::api::{create_or_update_device, get_devices};
+use crate::mqtt::MqttPublisher;
+use crate::state::{AppState, GatewayEvent, GatewayState};
 
 #[tokio::main]
 async fn main() {
-    // mpsc::channel erzeugt:
-    // tx = Sender -> erzeugt Events
-    // rx = Receiver -> verarbeitet Events
+    // Event channel für Gateway-Events
     let (tx, mut rx) = tokio::sync::mpsc::channel::<GatewayEvent>(32);
 
     // Gemeinsamer State im RAM
@@ -111,31 +105,4 @@ async fn main() {
         .unwrap();
 
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn get_devices(State(app): State<AppState>) -> Result<Json<Vec<Device>>, StatusCode> {
-    let state = app
-        .state
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(Json(state.devices.clone()))
-}
-
-async fn create_or_update_device(
-    State(app): State<AppState>,
-    Json(payload): Json<DeviceInput>,
-) -> Result<Json<Device>, StatusCode> {
-    app.tx
-        .send(GatewayEvent::Update {
-            id: payload.id,
-            value: payload.value,
-        })
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(Json(Device {
-        id: payload.id,
-        value: payload.value,
-    }))
 }
