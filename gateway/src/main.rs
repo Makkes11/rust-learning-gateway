@@ -6,7 +6,10 @@ use device::Device;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::mqtt::MqttPublisher;
+
 mod device;
+mod mqtt;
 
 use device::GatewayState;
 
@@ -24,18 +27,30 @@ async fn main() {
     // Mutex = jeweils nur EIN Task darf ihn ändern
     let shared_state = Arc::new(Mutex::new(GatewayState::new()));
 
-    // Optional: Startzustand setzen (direkt, ohne Events)
-    {
-        let mut guard = shared_state.lock().unwrap();
-        guard.apply_event(GatewayEvent::Update {
-            id: (1),
-            value: (rand::random::<i32>() % 100),
-        });
-        guard.apply_event(GatewayEvent::Update {
-            id: (2),
-            value: (rand::random::<i32>() % 100),
-        });
-    }
+    let mqtt = match MqttPublisher::new("localhost", 1883, "rust-gateway").await {
+        Ok(p) => {
+            println!("✓ MQTT connected");
+            Some(Arc::new(p))
+        }
+        Err(err) => {
+            eprintln!("✗ MQTT failed: {}", err);
+            None
+        }
+    };
+
+    // Sende Startzustände devices mit Events --> auch in MQTT
+    tx.send(GatewayEvent::Update {
+        id: 1,
+        value: rand::random::<i32>() % 100,
+    })
+    .await
+    .unwrap();
+    tx.send(GatewayEvent::Update {
+        id: 2,
+        value: rand::random::<i32>() % 100,
+    })
+    .await
+    .unwrap();
 
     // -------------------------
     // EVENT-LOOP TASK
@@ -43,8 +58,16 @@ async fn main() {
     // Dieser Task ist der EINZIGE Ort, an dem der State verändert wird.
     let event_state = shared_state.clone();
 
+    let mqtt_clone = mqtt.clone();
+
     tokio::spawn(async move {
         while let Some(event) = rx.recv().await {
+            if let Some(ref m) = mqtt_clone {
+                if let GatewayEvent::Update { id, value } = &event {
+                    m.publish_device_update(*id, *value).await;
+                }
+            }
+
             if let Ok(mut state) = event_state.lock() {
                 state.apply_event(event);
             } else {
@@ -59,7 +82,7 @@ async fn main() {
     // Dieser Task erzeugt nur Events, er verändert nicht den State.
     let tx2 = tx.clone();
     tokio::spawn(async move {
-        for _ in 0..10 {
+        loop {
             tokio::time::sleep(Duration::from_millis(500)).await;
 
             tx2.send(GatewayEvent::Tick(1))
