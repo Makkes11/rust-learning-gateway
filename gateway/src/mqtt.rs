@@ -3,7 +3,7 @@ use serde_json::json;
 use std::time::Duration;
 
 pub struct MqttPublisher {
-    pub client: AsyncClient,
+    client: AsyncClient,
 }
 
 impl MqttPublisher {
@@ -31,6 +31,22 @@ impl MqttPublisher {
         let payload = json!({
             "id": id,
             "value": value,
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        });
+
+        if let Err(err) = self
+            .client
+            .publish(topic, QoS::AtLeastOnce, false, payload.to_string())
+            .await
+        {
+            eprintln!("MQTT publish failed: {err}");
+        }
+    }
+
+    pub async fn delete_device(&self, id: u32) {
+        let topic = format!("devices/{}/deleted", id);
+        let payload = json!({
+            "id": id,
             "timestamp": chrono::Utc::now().to_rfc3339()
         });
 

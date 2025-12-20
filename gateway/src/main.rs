@@ -1,4 +1,7 @@
-use axum::{Router, routing::post};
+use axum::{
+    Router,
+    routing::{delete, post},
+};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -7,7 +10,7 @@ mod device;
 mod mqtt;
 mod state;
 
-use crate::api::{create_or_update_device, get_devices};
+use crate::api::{create_or_update_device, delete_device, get_devices};
 use crate::mqtt::MqttPublisher;
 use crate::state::{AppState, GatewayEvent, GatewayState};
 
@@ -56,10 +59,18 @@ async fn main() {
 
     tokio::spawn(async move {
         while let Some(event) = rx.recv().await {
-            if let Some(ref m) = mqtt_clone {
-                if let GatewayEvent::Update { id, value } = &event {
-                    m.publish_device_update(*id, *value).await;
+            match &event {
+                GatewayEvent::Update { id, value } => {
+                    if let Some(mqtt) = &mqtt_clone {
+                        mqtt.publish_device_update(*id, *value).await;
+                    }
                 }
+                GatewayEvent::Remove(id) => {
+                    if let Some(mqtt) = &mqtt_clone {
+                        mqtt.delete_device(*id).await;
+                    }
+                }
+                _ => {}
             }
 
             if let Ok(mut state) = event_state.lock() {
@@ -96,6 +107,7 @@ async fn main() {
     // -------------------------
     let app = Router::new()
         .route("/devices", post(create_or_update_device).get(get_devices))
+        .route("/devices/{id}", delete(delete_device))
         .with_state(app_state);
 
     println!("Server running on http://127.0.0.1:3000");
