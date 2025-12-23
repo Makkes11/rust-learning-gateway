@@ -1,6 +1,7 @@
 use rumqttc::{AsyncClient, MqttOptions, QoS};
 use serde_json::json;
 use std::time::Duration;
+use tracing::{debug, error};
 
 pub struct MqttPublisher {
     client: AsyncClient,
@@ -16,7 +17,7 @@ impl MqttPublisher {
         tokio::spawn(async move {
             loop {
                 if let Err(err) = eventloop.poll().await {
-                    eprintln!("MQTT error: {err}");
+                    error!("MQTT event loop error: {}", err);
                     tokio::time::sleep(Duration::from_secs(5)).await;
                 }
             }
@@ -27,6 +28,8 @@ impl MqttPublisher {
 
     pub async fn publish_device_update(&self, id: u32, value: i32) {
         let topic = format!("devices/{}/value", id);
+
+        debug!("Publishing to MQTT: topic={}, value={}", topic, value);
 
         let payload = json!({
             "id": id,
@@ -39,12 +42,15 @@ impl MqttPublisher {
             .publish(topic, QoS::AtLeastOnce, false, payload.to_string())
             .await
         {
-            eprintln!("MQTT publish failed: {err}");
+            error!("MQTT publish failed: {}", err);
         }
     }
 
     pub async fn delete_device(&self, id: u32) {
         let topic = format!("devices/{}/deleted", id);
+
+        debug!("Publishing to MQTT: topic={}, id={}", topic, id);
+
         let payload = json!({
             "id": id,
             "timestamp": chrono::Utc::now().to_rfc3339()

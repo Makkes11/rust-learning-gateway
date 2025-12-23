@@ -2,6 +2,7 @@ use crate::device::{Device, DeviceInput};
 use crate::state::{AppState, GatewayEvent};
 use axum::extract::Path;
 use axum::{Json, extract::State, http::StatusCode};
+use tracing::info;
 
 pub async fn get_devices(State(app): State<AppState>) -> Result<Json<Vec<Device>>, StatusCode> {
     let state = app
@@ -16,6 +17,8 @@ pub async fn create_or_update_device(
     State(app): State<AppState>,
     Json(payload): Json<DeviceInput>,
 ) -> Result<Json<Device>, StatusCode> {
+    info!("API: Creating/updating device id={}", payload.id);
+
     app.tx
         .send(GatewayEvent::Update {
             id: payload.id,
@@ -34,6 +37,8 @@ pub async fn delete_device(
     State(app): State<AppState>,
     Path(id): Path<u32>,
 ) -> Result<StatusCode, StatusCode> {
+    info!("API: Deleting device id={}", id);
+
     app.tx
         .send(GatewayEvent::Remove(id))
         .await

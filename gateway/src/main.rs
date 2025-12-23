@@ -16,17 +16,22 @@ use crate::api::{create_or_update_device, delete_device, get_devices};
 use crate::config::Config;
 use crate::mqtt::MqttPublisher;
 use crate::state::{AppState, GatewayEvent, GatewayState};
+use tracing::{debug, error, info, warn};
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
+        )
+        .init();
+
     let config = Config::load_or_default();
-    println!("📝 Config loaded:");
-    println!("   Server: {}:{}", config.server.host, config.server.port);
-    println!(
-        "   MQTT: {}:{} ({})",
-        config.mqtt.broker, config.mqtt.port, config.mqtt.client_id
+    info!(
+        "Config loaded: server={}:{}, mqtt={}:{}",
+        config.server.host, config.server.port, config.mqtt.broker, config.mqtt.port
     );
-    println!("   Polling: {}ms", config.polling.interval_ms);
+    info!("Polling: {}ms", config.polling.interval_ms);
 
     // Event channel für Gateway-Events
     let (tx, mut rx) = tokio::sync::mpsc::channel::<GatewayEvent>(32);
@@ -44,11 +49,11 @@ async fn main() {
     .await
     {
         Ok(p) => {
-            println!("✓ MQTT connected");
+            info!("✓ MQTT connected successfully");
             Some(Arc::new(p))
         }
         Err(err) => {
-            eprintln!("✗ MQTT failed: {}", err);
+            warn!("✗ MQTT connection failed, running without MQTT: {}", err);
             None
         }
     };
@@ -77,8 +82,12 @@ async fn main() {
 
     tokio::spawn(async move {
         while let Some(event) = rx.recv().await {
+            debug!("Event loop: received {:?}", event);
+
             match &event {
                 GatewayEvent::Update { id, value } => {
+                    debug!("Processing Update event: id={}, value={}", id, value);
+
                     if let Some(mqtt) = &mqtt_clone {
                         mqtt.publish_device_update(*id, *value).await;
                     }
@@ -94,7 +103,7 @@ async fn main() {
             if let Ok(mut state) = event_state.lock() {
                 state.apply_event(event);
             } else {
-                eprintln!("Mutex poisoned");
+                error!("Mutex poisoned in event loop");
             }
         }
     });
@@ -108,9 +117,9 @@ async fn main() {
         loop {
             sleep(Duration::from_millis(config.polling.interval_ms)).await;
 
-            tx2.send(GatewayEvent::Tick(1))
-                .await
-                .expect("worker disappeared");
+            tx2.send(GatewayEvent::Tick(1)).await.unwrap_or_else(|e| {
+                error!("Failed to send tick event: {}", e);
+            });
         }
     });
 
@@ -131,7 +140,7 @@ async fn main() {
     let addr = format!("{}:{}", config.server.host, config.server.port);
     let listener = TcpListener::bind(&addr).await.unwrap();
 
-    println!("Server running on {}", &addr);
+    info!("HTTP server listening on {}", addr);
 
     axum::serve(listener, app).await.unwrap();
 }
