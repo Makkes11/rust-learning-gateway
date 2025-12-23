@@ -13,3 +13,4 @@ tokio =  { version = "1.48.0", features = ["full"] }
 rumqttc = "0.24"
 chrono = "0.4"
 
+toml = "0.8"

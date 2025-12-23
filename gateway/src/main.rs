@@ -4,18 +4,30 @@ use axum::{
 };
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use tokio::{net::TcpListener, time::sleep};
 
 mod api;
+mod config;
 mod device;
 mod mqtt;
 mod state;
 
 use crate::api::{create_or_update_device, delete_device, get_devices};
+use crate::config::Config;
 use crate::mqtt::MqttPublisher;
 use crate::state::{AppState, GatewayEvent, GatewayState};
 
 #[tokio::main]
 async fn main() {
+    let config = Config::load_or_default();
+    println!("📝 Config loaded:");
+    println!("   Server: {}:{}", config.server.host, config.server.port);
+    println!(
+        "   MQTT: {}:{} ({})",
+        config.mqtt.broker, config.mqtt.port, config.mqtt.client_id
+    );
+    println!("   Polling: {}ms", config.polling.interval_ms);
+
     // Event channel für Gateway-Events
     let (tx, mut rx) = tokio::sync::mpsc::channel::<GatewayEvent>(32);
 
@@ -24,7 +36,13 @@ async fn main() {
     // Mutex = jeweils nur EIN Task darf ihn ändern
     let shared_state = Arc::new(Mutex::new(GatewayState::new()));
 
-    let mqtt = match MqttPublisher::new("localhost", 1883, "rust-gateway").await {
+    let mqtt = match MqttPublisher::new(
+        &config.mqtt.broker,
+        config.mqtt.port,
+        &config.mqtt.client_id,
+    )
+    .await
+    {
         Ok(p) => {
             println!("✓ MQTT connected");
             Some(Arc::new(p))
@@ -88,7 +106,7 @@ async fn main() {
     let tx2 = tx.clone();
     tokio::spawn(async move {
         loop {
-            tokio::time::sleep(Duration::from_millis(500)).await;
+            sleep(Duration::from_millis(config.polling.interval_ms)).await;
 
             tx2.send(GatewayEvent::Tick(1))
                 .await
@@ -110,11 +128,10 @@ async fn main() {
         .route("/devices/{id}", delete(delete_device))
         .with_state(app_state);
 
-    println!("Server running on http://127.0.0.1:3000");
+    let addr = format!("{}:{}", config.server.host, config.server.port);
+    let listener = TcpListener::bind(&addr).await.unwrap();
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
+    println!("Server running on {}", &addr);
 
     axum::serve(listener, app).await.unwrap();
 }

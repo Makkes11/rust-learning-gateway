@@ -1,0 +1,11 @@
+[server]
+host = "127.0.0.1"
+port = 8080
+
+[mqtt]
+broker = "localhost"
+port = 1883
+client_id = "rust-gateway"
+
+[polling]
+interval_ms = 2000
