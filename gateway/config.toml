@@ -14,5 +14,17 @@ port = 5020
 slave_id = 1
 poll_interval_ms = 1000 
 
+[[modbus.registers]]
+address = 0
+count = 1
+device_id = 100
+scale = 1.0
+
+[[modbus.registers]]
+address = 5
+count = 2
+device_id = 200
+scale = 0.1
+
 [polling]
 interval_ms = 2000

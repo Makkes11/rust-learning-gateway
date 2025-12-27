@@ -19,12 +19,21 @@ pub struct PollingConfig {
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]
+pub struct RegisterMapping {
+    pub address: u16,
+    pub count: u16,
+    pub device_id: u32,
+    pub scale: f64,
+}
+
+#[derive(Debug, serde::Deserialize, Clone)]
 pub struct ModbusConfig {
     pub enabled: bool,
     pub host: String,
     pub port: u16,
     pub slave_id: u8,
     pub poll_interval_ms: u64,
+    pub registers: Vec<RegisterMapping>,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -68,6 +77,12 @@ impl Default for Config {
                 port: 502,
                 slave_id: 1,
                 poll_interval_ms: 1000,
+                registers: vec![RegisterMapping {
+                    address: 0,
+                    count: 10,
+                    device_id: 100,
+                    scale: 1.0,
+                }],
             },
         }
     }

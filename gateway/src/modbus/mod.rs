@@ -5,7 +5,7 @@ use tokio::sync::mpsc::Sender;
 use tokio::time::{Duration, sleep};
 use tokio_modbus::client::Context;
 use tokio_modbus::prelude::*;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 pub struct ModbusPoller {
     config: ModbusConfig,
@@ -67,19 +67,42 @@ impl ModbusPoller {
     }
 
     async fn poll_once(&self, ctx: &mut Context) -> Result<()> {
-        // read holding registers (address 0, count 10)
-        let registers = ctx.read_holding_registers(0, 10).await??;
-        debug!("Modbus read {} registers", registers.len());
+        for mapping in &self.config.registers {
+            let registers = ctx
+                .read_holding_registers(mapping.address, mapping.count)
+                .await??;
 
-        for (index, &value) in registers.iter().enumerate() {
-            let device_id = (index as u32) + 100;
+            let raw_value: i32 = match mapping.count {
+                1 => {
+                    // Ein Register (16-bit) direkt als i32
+                    registers[0] as i32
+                }
+                2 => {
+                    // Zwei Register zu 32-bit kombinieren
+                    let high = registers[0] as u32;
+                    let low = registers[1] as u32;
+                    let combined = (high << 16) | low;
+                    combined as i32
+                }
+                _ => {
+                    warn!("Unsupported register count: {}, skipping", mapping.count);
+                    continue;
+                }
+            };
+
+            let scaled_value = (raw_value as f64 * mapping.scale) as i32;
 
             self.tx
                 .send(GatewayEvent::Update {
-                    id: device_id,
-                    value: value as i32,
+                    id: mapping.device_id,
+                    value: scaled_value,
                 })
                 .await?;
+
+            debug!(
+                "Device {}: address={}, raw={}, scaled={}",
+                mapping.device_id, mapping.address, raw_value, scaled_value
+            );
         }
 
         Ok(())
