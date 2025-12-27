@@ -18,11 +18,21 @@ pub struct PollingConfig {
     pub interval_ms: u64,
 }
 
+#[derive(Debug, serde::Deserialize, Clone)]
+pub struct ModbusConfig {
+    pub enabled: bool,
+    pub host: String,
+    pub port: u16,
+    pub slave_id: u8,
+    pub poll_interval_ms: u64,
+}
+
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
     pub server: ServerConfig,
     pub mqtt: MqttConfig,
     pub polling: PollingConfig,
+    pub modbus: ModbusConfig,
 }
 
 impl Config {
@@ -52,6 +62,13 @@ impl Default for Config {
                 client_id: "rust-gateway".into(),
             },
             polling: PollingConfig { interval_ms: 500 },
+            modbus: ModbusConfig {
+                enabled: false,
+                host: "127.0.0.1".into(),
+                port: 502,
+                slave_id: 1,
+                poll_interval_ms: 1000,
+            },
         }
     }
 }

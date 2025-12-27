@@ -7,5 +7,12 @@ broker = "localhost"
 port = 1883
 client_id = "rust-gateway"
 
+[modbus]
+enabled = true # true if real modbus
+host = "127.0.0.1"
+port = 5020
+slave_id = 1
+poll_interval_ms = 1000 
+
 [polling]
 interval_ms = 2000

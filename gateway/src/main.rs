@@ -9,11 +9,13 @@ use tokio::{net::TcpListener, time::sleep};
 mod api;
 mod config;
 mod device;
+mod modbus;
 mod mqtt;
 mod state;
 
 use crate::api::{create_or_update_device, delete_device, get_devices};
 use crate::config::Config;
+use crate::modbus::ModbusPoller;
 use crate::mqtt::MqttPublisher;
 use crate::state::{AppState, GatewayEvent, GatewayState};
 use tracing::{debug, error, info, warn};
@@ -107,6 +109,19 @@ async fn main() {
             }
         }
     });
+
+    // -------------------------
+    // MODBUS POLLING TASK
+    // -------------------------
+    if config.modbus.enabled {
+        let modbus_poller = ModbusPoller::new(config.modbus.clone(), tx.clone());
+
+        tokio::spawn(async move {
+            modbus_poller.start().await;
+        });
+
+        info!("Modbus polling task started");
+    }
 
     // -------------------------
     // BACKGROUND TICK TASK
