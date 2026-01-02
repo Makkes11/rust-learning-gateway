@@ -4,21 +4,29 @@ use axum::{
 };
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tokio::{net::TcpListener, time::sleep};
+use tokio::{net::TcpListener, select, sync::broadcast, time::sleep};
 
 mod api;
 mod config;
 mod device;
+mod lifecycle;
 mod modbus;
 mod mqtt;
 mod state;
 
 use crate::api::{create_or_update_device, delete_device, get_devices};
 use crate::config::Config;
+use crate::lifecycle::Lifecycle;
 use crate::modbus::ModbusPoller;
 use crate::mqtt::MqttPublisher;
 use crate::state::{AppState, GatewayEvent, GatewayState};
 use tracing::{debug, error, info, warn};
+
+fn spawn_service<T: Lifecycle>(service: T, shutdown: broadcast::Receiver<()>) {
+    tokio::spawn(async move {
+        service.run(shutdown).await;
+    });
+}
 
 #[tokio::main]
 async fn main() {
@@ -34,6 +42,8 @@ async fn main() {
         config.server.host, config.server.port, config.mqtt.broker, config.mqtt.port
     );
     info!("Polling: {}ms", config.polling.interval_ms);
+
+    let (shutdown_tx, _shutdown_rx) = tokio::sync::broadcast::channel::<()>(1);
 
     // Event channel für Gateway-Events
     let (tx, mut rx) = tokio::sync::mpsc::channel::<GatewayEvent>(32);
@@ -115,27 +125,32 @@ async fn main() {
     // -------------------------
     if config.modbus.enabled {
         let modbus_poller = ModbusPoller::new(config.modbus.clone(), tx.clone());
-
-        tokio::spawn(async move {
-            modbus_poller.start().await;
-        });
-
+        let shutdown_rx = shutdown_tx.subscribe();
+        spawn_service(modbus_poller, shutdown_rx);
         info!("Modbus polling task started");
     }
 
     // -------------------------
     // BACKGROUND TICK TASK
     // -------------------------
-    // Dieser Task erzeugt nur Events, er verändert nicht den State.
+    // task creates only events, not changing the state
     let tx2 = tx.clone();
+    let mut tick_shutdown = shutdown_tx.subscribe();
     tokio::spawn(async move {
         loop {
-            sleep(Duration::from_millis(config.polling.interval_ms)).await;
-
-            tx2.send(GatewayEvent::Tick(1)).await.unwrap_or_else(|e| {
-                error!("Failed to send tick event: {}", e);
-            });
+            select! {
+                _ = sleep(Duration::from_millis(config.polling.interval_ms)) => {
+                    if tx2.send(GatewayEvent::Tick(1)).await.is_err() {
+                        break; // channel closed
+                    }
+                }
+                _ = tick_shutdown.recv() => {
+                    info!("Background tick task shutting down");
+                    break;
+                }
+            }
         }
+        info!("Background tick task stopped");
     });
 
     // AppState bündelt tx und shared_state
@@ -157,5 +172,30 @@ async fn main() {
 
     info!("HTTP server listening on {}", addr);
 
-    axum::serve(listener, app).await.unwrap();
+    let shutdown_signal = shutdown_tx.clone();
+
+    tokio::spawn(async move {
+        // wait for Ctrl+C
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Failed to listen for Ctrl+C");
+
+        info!("Shutdown signal received (Ctrl+C)");
+
+        // send shutdown signal to all listener
+        let _ = shutdown_signal.send(());
+    });
+
+    info!("Press Ctrl+C to shutdown gracefully");
+
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async move {
+            let mut shutdown_rx = shutdown_tx.subscribe();
+            shutdown_rx.recv().await.ok();
+            info!("HTTP server shutting down");
+        })
+        .await
+        .unwrap();
+
+    info!("Gateway stopped completely");
 }

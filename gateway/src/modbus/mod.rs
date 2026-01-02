@@ -1,6 +1,10 @@
 use crate::config::ModbusConfig;
+use crate::lifecycle::Lifecycle;
 use crate::state::GatewayEvent;
 use anyhow::Result;
+use async_trait::async_trait;
+use tokio::select;
+use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{Duration, sleep};
 use tokio_modbus::client::Context;
@@ -17,32 +21,9 @@ impl ModbusPoller {
         Self { config, tx }
     }
 
-    pub async fn start(self) {
-        if !self.config.enabled {
-            info!("Modbus polling disabled in config");
-            return;
-        }
+    // pub async fn start(self, mut shutdown: broadcast::Receiver<()>) {}
 
-        info!(
-            "Starting Modbus poller: {}:{}",
-            self.config.host, self.config.port
-        );
-
-        loop {
-            match self.run_polling_loop().await {
-                Ok(_) => {
-                    info!("Modbus connection closed gracefully");
-                }
-                Err(e) => {
-                    error!("Modbus connection failed: {}", e);
-                    info!("Retrying in 5 seconds...");
-                    sleep(Duration::from_secs(5)).await;
-                }
-            }
-        }
-    }
-
-    async fn run_polling_loop(&self) -> Result<()> {
+    async fn run_polling_loop(&self, shutdown: &mut broadcast::Receiver<()>) -> Result<()> {
         let socket_addr = format!("{}:{}", self.config.host, self.config.port);
 
         info!("Connecting to Modbus device at {}", socket_addr);
@@ -62,7 +43,16 @@ impl ModbusPoller {
                 }
             }
 
-            sleep(Duration::from_millis(self.config.poll_interval_ms)).await;
+            // wait either for sleep or shutdown
+            select! {
+                _ = sleep(Duration::from_millis(self.config.poll_interval_ms)) => {
+                    // Sleep fertig → weiter pollen
+                }
+                _ = shutdown.recv() => {
+                    info!("Modbus received shutdown signal");
+                    return Ok(());  // Sauber beenden
+                }
+            }
         }
     }
 
@@ -106,5 +96,50 @@ impl ModbusPoller {
         }
 
         Ok(())
+    }
+}
+
+#[async_trait]
+impl Lifecycle for ModbusPoller {
+    async fn run(self, mut shutdown: broadcast::Receiver<()>) {
+        if !self.config.enabled {
+            info!("Modbus polling disabled in config");
+            return;
+        }
+
+        info!(
+            "Starting Modbus poller: {}:{}",
+            self.config.host, self.config.port
+        );
+
+        loop {
+            // Check vor Reconnect ob Shutdown kam
+            if shutdown.try_recv().is_ok() {
+                info!("Modbus shutting down before reconnect");
+                break;
+            }
+
+            match self.run_polling_loop(&mut shutdown).await {
+                Ok(_) => {
+                    info!("Modbus connection closed gracefully");
+                    break;
+                }
+                Err(e) => {
+                    error!("Modbus connection failed: {}", e);
+                    info!("Retrying in 5 seconds...");
+
+                    // Sleep MIT Shutdown-Check
+                    select! {
+                        _ = sleep(Duration::from_secs(5)) => {}
+                        _ = shutdown.recv() => {
+                            info!("Shutdown during reconnect wait");
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        info!("Modbus poller stopped");
     }
 }
