@@ -28,3 +28,8 @@ scale = 0.1
 
 [polling]
 interval_ms = 2000
+
+[simulation]
+interval_ms = 2000
+add_value = 1
+enabled = false

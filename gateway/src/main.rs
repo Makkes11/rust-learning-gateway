@@ -109,11 +109,12 @@ async fn main() {
                         mqtt.delete_device(*id).await;
                     }
                 }
-                _ => {}
             }
 
             if let Ok(mut state) = event_state.lock() {
-                state.apply_event(event);
+                if let Err(e) = state.apply_event(event) {
+                    error!("{}", e);
+                };
             } else {
                 error!("Mutex poisoned in event loop");
             }
@@ -134,24 +135,43 @@ async fn main() {
     // BACKGROUND TICK TASK
     // -------------------------
     // task creates only events, not changing the state
-    let tx2 = tx.clone();
-    let mut tick_shutdown = shutdown_tx.subscribe();
-    tokio::spawn(async move {
-        loop {
-            select! {
-                _ = sleep(Duration::from_millis(config.polling.interval_ms)) => {
-                    if tx2.send(GatewayEvent::Tick(1)).await.is_err() {
-                        break; // channel closed
-                    }
-                }
-                _ = tick_shutdown.recv() => {
-                    info!("Background tick task shutting down");
-                    break;
+    if config.simulation.enabled {
+        let tx2 = tx.clone();
+        let mut tick_shutdown = shutdown_tx.subscribe();
+        let event_state = shared_state.clone();
+        let snapshot = {
+            match event_state.lock() {
+                Ok(state) => state.devices.clone(),
+                Err(_) => {
+                    error!("Mutex poisoned in simulation task");
+                    return; // Task beenden
                 }
             }
-        }
-        info!("Background tick task stopped");
-    });
+        };
+        tokio::spawn(async move {
+            loop {
+                select! {
+                    _ = sleep(Duration::from_millis(config.simulation.interval_ms)) => {
+                        for dev in &snapshot {
+                            let new_value = dev.value + config.simulation.add_value;
+                            let _ = tx2.send(GatewayEvent::Update {
+                                id: dev.id,
+                                value: new_value,
+                            })
+                            .await;
+                        }
+                    }
+
+                    _ = tick_shutdown.recv() => {
+                        info!("Background tick task shutting down");
+                        break;
+                    }
+                }
+            }
+
+            info!("Background tick task stopped");
+        });
+    }
 
     // AppState bündelt tx und shared_state
     let app_state = AppState {

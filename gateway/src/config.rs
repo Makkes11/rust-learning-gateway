@@ -36,12 +36,20 @@ pub struct ModbusConfig {
     pub registers: Vec<RegisterMapping>,
 }
 
+#[derive(Debug, serde::Deserialize, Clone)]
+pub struct SimulationTickConfig {
+    pub enabled: bool,
+    pub interval_ms: u64,
+    pub add_value: i32,
+}
+
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
     pub server: ServerConfig,
     pub mqtt: MqttConfig,
     pub polling: PollingConfig,
     pub modbus: ModbusConfig,
+    pub simulation: SimulationTickConfig,
 }
 
 impl Config {
@@ -83,6 +91,11 @@ impl Default for Config {
                     device_id: 100,
                     scale: 1.0,
                 }],
+            },
+            simulation: SimulationTickConfig {
+                enabled: false,
+                interval_ms: 1000,
+                add_value: 1,
             },
         }
     }

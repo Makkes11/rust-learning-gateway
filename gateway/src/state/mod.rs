@@ -6,7 +6,23 @@ use tokio::sync::mpsc::Sender;
 pub enum GatewayEvent {
     Update { id: u32, value: i32 },
     Remove(u32),
-    Tick(i32),
+}
+
+#[derive(Debug)]
+pub enum StateError {
+    DeviceNotFound(u32),
+}
+
+use std::fmt;
+
+impl fmt::Display for StateError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            StateError::DeviceNotFound(id) => {
+                write!(f, "Device with id {} not found", id)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -19,20 +35,26 @@ impl GatewayState {
         Self { devices: vec![] }
     }
 
-    pub fn apply_event(&mut self, ev: GatewayEvent) {
+    pub fn apply_event(&mut self, ev: GatewayEvent) -> Result<(), StateError> {
         match ev {
             GatewayEvent::Update { id, value } => {
                 if let Some(dev) = self.devices.iter_mut().find(|d| d.id == id) {
                     dev.value = value;
                 } else {
-                    self.devices.push(Device { id, value });
+                    return Err(StateError::DeviceNotFound(id));
+                    // self.devices.push(Device { id, value });
                 }
             }
-            GatewayEvent::Remove(id) => self.devices.retain(|d| d.id != id),
-            GatewayEvent::Tick(v) => {
-                self.devices.iter_mut().for_each(|d| d.value += v);
+            GatewayEvent::Remove(id) => {
+                if let Some(pos) = self.devices.iter().position(|d| d.id == id) {
+                    self.devices.remove(pos);
+                } else {
+                    return Err(StateError::DeviceNotFound(id));
+                }
             }
         }
+
+        Ok(())
     }
 }
 
