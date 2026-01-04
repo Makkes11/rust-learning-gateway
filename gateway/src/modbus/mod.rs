@@ -80,12 +80,12 @@ impl ModbusPoller {
                 }
             };
 
-            let scaled_value = (raw_value as f64 * mapping.scale) as i32;
+            let scaled_value = raw_value as f64 * mapping.scale;
 
             self.tx
-                .send(GatewayEvent::Update {
+                .send(GatewayEvent::DeviceValueObserved {
                     id: mapping.device_id,
-                    value: scaled_value,
+                    value: Some(scaled_value),
                 })
                 .await?;
 

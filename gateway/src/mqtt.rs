@@ -26,7 +26,7 @@ impl MqttPublisher {
         Ok(Self { client })
     }
 
-    pub async fn publish_device_update(&self, id: u32, value: i32) {
+    pub async fn publish_device_update(&self, id: u32, value: f64) {
         let topic = format!("devices/{}/value", id);
 
         debug!("Publishing to MQTT: topic={}, value={}", topic, value);
@@ -48,6 +48,25 @@ impl MqttPublisher {
 
     pub async fn delete_device(&self, id: u32) {
         let topic = format!("devices/{}/deleted", id);
+
+        debug!("Publishing to MQTT: topic={}, id={}", topic, id);
+
+        let payload = json!({
+            "id": id,
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        });
+
+        if let Err(err) = self
+            .client
+            .publish(topic, QoS::AtLeastOnce, false, payload.to_string())
+            .await
+        {
+            eprintln!("MQTT publish failed: {err}");
+        }
+    }
+
+    pub async fn create_device(&self, id: u32) {
+        let topic = format!("devices/{}/created", id);
 
         debug!("Publishing to MQTT: topic={}, id={}", topic, id);
 

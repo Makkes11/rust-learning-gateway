@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    routing::{delete, post},
+    routing::{post, put},
 };
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -14,7 +14,7 @@ mod modbus;
 mod mqtt;
 mod state;
 
-use crate::api::{create_or_update_device, delete_device, get_devices};
+use crate::api::{create_device, delete_device, get_devices, update_device};
 use crate::config::Config;
 use crate::lifecycle::Lifecycle;
 use crate::modbus::ModbusPoller;
@@ -71,15 +71,21 @@ async fn main() {
     };
 
     // Sende Startzustände devices mit Events --> auch in MQTT
-    tx.send(GatewayEvent::Update {
+    tx.send(GatewayEvent::DeviceCreated { id: 1 })
+        .await
+        .unwrap();
+    tx.send(GatewayEvent::DeviceCreated { id: 2 })
+        .await
+        .unwrap();
+    tx.send(GatewayEvent::DeviceValueObserved {
         id: 1,
-        value: rand::random::<i32>() % 100,
+        value: Some(rand::random::<f64>() * 100.0),
     })
     .await
     .unwrap();
-    tx.send(GatewayEvent::Update {
+    tx.send(GatewayEvent::DeviceValueObserved {
         id: 2,
-        value: rand::random::<i32>() % 100,
+        value: Some(rand::random::<f64>() * 100.0),
     })
     .await
     .unwrap();
@@ -97,16 +103,23 @@ async fn main() {
             debug!("Event loop: received {:?}", event);
 
             match &event {
-                GatewayEvent::Update { id, value } => {
-                    debug!("Processing Update event: id={}, value={}", id, value);
+                GatewayEvent::DeviceValueObserved { id, value } => {
+                    if let Some(val) = value {
+                        debug!("Processing Update event: id={}, value={}", id, *val);
 
-                    if let Some(mqtt) = &mqtt_clone {
-                        mqtt.publish_device_update(*id, *value).await;
+                        if let Some(mqtt) = &mqtt_clone {
+                            mqtt.publish_device_update(*id, *val).await;
+                        }
                     }
                 }
                 GatewayEvent::Remove(id) => {
                     if let Some(mqtt) = &mqtt_clone {
                         mqtt.delete_device(*id).await;
+                    }
+                }
+                GatewayEvent::DeviceCreated { id } => {
+                    if let Some(mqtt) = &mqtt_clone {
+                        mqtt.create_device(*id).await;
                     }
                 }
             }
@@ -153,12 +166,15 @@ async fn main() {
                 select! {
                     _ = sleep(Duration::from_millis(config.simulation.interval_ms)) => {
                         for dev in &snapshot {
-                            let new_value = dev.value + config.simulation.add_value;
-                            let _ = tx2.send(GatewayEvent::Update {
+                            if let Some(val) = dev.value {
+                                 let new_value = val + config.simulation.add_value as f64;
+                            let _ = tx2.send(GatewayEvent::DeviceValueObserved {
                                 id: dev.id,
-                                value: new_value,
+                                value: Some(new_value),
                             })
                             .await;
+                            }
+
                         }
                     }
 
@@ -183,8 +199,8 @@ async fn main() {
     // ROUTER
     // -------------------------
     let app = Router::new()
-        .route("/devices", post(create_or_update_device).get(get_devices))
-        .route("/devices/{id}", delete(delete_device))
+        .route("/devices", post(update_device).get(get_devices))
+        .route("/devices/{id}", put(create_device).delete(delete_device))
         .with_state(app_state);
 
     let addr = format!("{}:{}", config.server.host, config.server.port);

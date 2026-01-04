@@ -17,13 +17,13 @@ poll_interval_ms = 1000
 [[modbus.registers]]
 address = 0
 count = 1
-device_id = 100
+device_id = 1
 scale = 1.0
 
 [[modbus.registers]]
 address = 5
 count = 2
-device_id = 200
+device_id = 2
 scale = 0.1
 
 [polling]

@@ -13,23 +13,40 @@ pub async fn get_devices(State(app): State<AppState>) -> Result<Json<Vec<Device>
     Ok(Json(state.devices.clone()))
 }
 
-pub async fn create_or_update_device(
+pub async fn create_device(
+    State(app): State<AppState>,
+    Path(id): Path<u32>,
+) -> Result<Json<Device>, StatusCode> {
+    info!("API: Creating device id={}", id);
+
+    app.tx
+        .send(GatewayEvent::DeviceCreated { id: id })
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(Device {
+        id: id,
+        value: None,
+    }))
+}
+
+pub async fn update_device(
     State(app): State<AppState>,
     Json(payload): Json<DeviceInput>,
 ) -> Result<Json<Device>, StatusCode> {
-    info!("API: Creating/updating device id={}", payload.id);
+    info!("API: Updating device id={}", payload.id);
 
     app.tx
-        .send(GatewayEvent::Update {
+        .send(GatewayEvent::DeviceValueObserved {
             id: payload.id,
-            value: payload.value,
+            value: Some(payload.value),
         })
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(Device {
         id: payload.id,
-        value: payload.value,
+        value: Some(payload.value),
     }))
 }
 

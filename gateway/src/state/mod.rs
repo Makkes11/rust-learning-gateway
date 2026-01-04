@@ -1,10 +1,12 @@
 use crate::device::Device;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::Sender;
+use tracing::{info, warn};
 
 #[derive(Debug)]
 pub enum GatewayEvent {
-    Update { id: u32, value: i32 },
+    DeviceValueObserved { id: u32, value: Option<f64> },
+    DeviceCreated { id: u32 },
     Remove(u32),
 }
 
@@ -37,12 +39,11 @@ impl GatewayState {
 
     pub fn apply_event(&mut self, ev: GatewayEvent) -> Result<(), StateError> {
         match ev {
-            GatewayEvent::Update { id, value } => {
+            GatewayEvent::DeviceValueObserved { id, value } => {
                 if let Some(dev) = self.devices.iter_mut().find(|d| d.id == id) {
                     dev.value = value;
                 } else {
                     return Err(StateError::DeviceNotFound(id));
-                    // self.devices.push(Device { id, value });
                 }
             }
             GatewayEvent::Remove(id) => {
@@ -50,6 +51,14 @@ impl GatewayState {
                     self.devices.remove(pos);
                 } else {
                     return Err(StateError::DeviceNotFound(id));
+                }
+            }
+            GatewayEvent::DeviceCreated { id } => {
+                if let Some(device) = self.devices.iter_mut().find(|d| d.id == id) {
+                    warn!("Device with id {} already exists", device.id);
+                } else {
+                    self.devices.push(Device { id, value: None });
+                    info!("Created Device with id {}", id);
                 }
             }
         }
