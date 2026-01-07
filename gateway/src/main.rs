@@ -102,34 +102,46 @@ async fn main() {
         while let Some(event) = rx.recv().await {
             debug!("Event loop: received {:?}", event);
 
-            match &event {
-                GatewayEvent::DeviceValueObserved { id, value } => {
-                    if let Some(val) = value {
-                        debug!("Processing Update event: id={}, value={}", id, *val);
+            let state_change = {
+                let mut state = match event_state.lock() {
+                    Ok(s) => s,
+                    Err(_) => {
+                        error!("Mutex poisoned in event loop");
+                        return;
+                    }
+                };
 
+                match state.apply_event(event) {
+                    Ok(sc) => sc,
+                    Err(e) => {
+                        error!("{}", e);
+                        return;
+                    }
+                }
+            };
+
+            if let Some(s) = state_change {
+                match s {
+                    state::StateChange::DeviceCreated { id } => {
                         if let Some(mqtt) = &mqtt_clone {
-                            mqtt.publish_device_update(*id, *val).await;
+                            mqtt.create_device(id).await;
+                        }
+                    }
+                    state::StateChange::DeviceUpdated { id, value } => {
+                        if let Some(val) = value {
+                            debug!("Processing Update event: id={}, value={}", id, val);
+
+                            if let Some(mqtt) = &mqtt_clone {
+                                mqtt.publish_device_update(id, val).await;
+                            }
+                        }
+                    }
+                    state::StateChange::DeviceRemoved { id } => {
+                        if let Some(mqtt) = &mqtt_clone {
+                            mqtt.delete_device(id).await;
                         }
                     }
                 }
-                GatewayEvent::Remove(id) => {
-                    if let Some(mqtt) = &mqtt_clone {
-                        mqtt.delete_device(*id).await;
-                    }
-                }
-                GatewayEvent::DeviceCreated { id } => {
-                    if let Some(mqtt) = &mqtt_clone {
-                        mqtt.create_device(*id).await;
-                    }
-                }
-            }
-
-            if let Ok(mut state) = event_state.lock() {
-                if let Err(e) = state.apply_event(event) {
-                    error!("{}", e);
-                };
-            } else {
-                error!("Mutex poisoned in event loop");
             }
         }
     });

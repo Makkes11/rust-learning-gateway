@@ -1,13 +1,19 @@
 use crate::device::Device;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::Sender;
-use tracing::{info, warn};
+use tracing::info;
 
 #[derive(Debug)]
 pub enum GatewayEvent {
     DeviceValueObserved { id: u32, value: Option<f64> },
     DeviceCreated { id: u32 },
     Remove(u32),
+}
+
+pub enum StateChange {
+    DeviceCreated { id: u32 },
+    DeviceUpdated { id: u32, value: Option<f64> },
+    DeviceRemoved { id: u32 },
 }
 
 #[derive(Debug)]
@@ -37,33 +43,41 @@ impl GatewayState {
         Self { devices: vec![] }
     }
 
-    pub fn apply_event(&mut self, ev: GatewayEvent) -> Result<(), StateError> {
+    pub fn apply_event(&mut self, ev: GatewayEvent) -> Result<Option<StateChange>, StateError> {
         match ev {
             GatewayEvent::DeviceValueObserved { id, value } => {
-                if let Some(dev) = self.devices.iter_mut().find(|d| d.id == id) {
-                    dev.value = value;
-                } else {
-                    return Err(StateError::DeviceNotFound(id));
-                }
+                let dev = self
+                    .devices
+                    .iter_mut()
+                    .find(|d| d.id == id)
+                    .ok_or(StateError::DeviceNotFound(id))?;
+
+                dev.value = value;
+                Ok(Some(StateChange::DeviceUpdated { id, value }))
             }
             GatewayEvent::Remove(id) => {
-                if let Some(pos) = self.devices.iter().position(|d| d.id == id) {
-                    self.devices.remove(pos);
-                } else {
-                    return Err(StateError::DeviceNotFound(id));
-                }
+                let pos = self
+                    .devices
+                    .iter()
+                    .position(|d| d.id == id)
+                    .ok_or(StateError::DeviceNotFound(id))?;
+
+                self.devices.remove(pos);
+                Ok(Some(StateChange::DeviceRemoved { id }))
             }
             GatewayEvent::DeviceCreated { id } => {
-                if let Some(device) = self.devices.iter_mut().find(|d| d.id == id) {
-                    warn!("Device with id {} already exists", device.id);
+                let dev = self.devices.iter().find(|d| d.id == id);
+
+                if let Some(device) = dev {
+                    info!("Device with id {} already exists", device.id);
+                    return Ok(None);
                 } else {
                     self.devices.push(Device { id, value: None });
                     info!("Created Device with id {}", id);
+                    Ok(Some(StateChange::DeviceCreated { id }))
                 }
             }
         }
-
-        Ok(())
     }
 }
 
