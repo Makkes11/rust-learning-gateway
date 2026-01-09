@@ -1,166 +1,228 @@
-# IoT Gateway in Rust
+# Industrial IoT Gateway
 
-Ein event-getriebenes Gateway für industrielle IoT-Anwendungen. Gebaut mit Rust, Tokio und Axum während meiner Rust-Lernreise.
+Production-grade, event-driven Industrial IoT gateway written in Rust.
 
-## Was macht das Gateway?
+---
 
-Das Gateway verarbeitet Gerätedaten über verschiedene Kanäle:
-- REST API zum Erstellen und Aktualisieren von Geräten
-- Hintergrund-Task simuliert Sensor-Polling (später echte Protokolle)
-- Zentraler State mit thread-sicherem Zugriff
-- Event-basierte Architektur ohne Race Conditions
+## Features
 
-## 🚀 Quick Start
+- Event-driven architecture (single-writer pattern)
+- REST API (Axum)
+- MQTT publishing
+- Modbus TCP client
+- Async runtime (Tokio)
+- Graceful shutdown
+- Configuration-driven
+- Structured logging
 
-### Gateway starten
+---
+
+## Architecture
+```
+REST API / Modbus / Background Tasks
+            ↓
+    mpsc::channel (Events)
+            ↓
+      Event Loop (Single Writer)
+            ↓
+    ┌───────┴────────┐
+    ↓                ↓
+GatewayState    Side Effects
+(Arc<Mutex>)    (MQTT, Logging)
+```
+
+**Key Principle:** All state changes flow through a single event loop - no race conditions.
+
+---
+
+## Quick Start
 ```bash
+cd gateway
 cargo run
 
-# Server starts on http://127.0.0.1:3000
-# ✓ MQTT connected (if mosquitto running)
+# With debug logging
+RUST_LOG=debug cargo run
+
+# Server starts on http://127.0.0.1:8080
 ```
 
-### API testen
-```bash
-# Alle Geräte abrufen
-curl http://127.0.0.1:3000/devices
+---
 
-# Gerät erstellen
-curl -X POST http://127.0.0.1:3000/devices \
-  -H "Content-Type: application/json" \
-  -d '{"id": 42, "value": 100}'
-
-# Gerät löschen
-curl -X DELETE http://127.0.0.1:3000/devices/42 -v
-
-# MQTT Messages live sehen
-mosquitto_sub -h localhost -t "devices/#" -v
-```
-
-## API Endpoints
+## API Reference
 
 ### `GET /devices`
-Gibt alle registrierten Geräte zurück.
-
-**Response:** `200 OK`
+List all devices.
 ```json
-[
-  {"id": 1, "value": 42},
-  {"id": 2, "value": 100}
-]
+[{"id": 1, "value": 42.5}]
+```
+
+### `PUT /devices/{id}`
+Create device.
+```json
+{"id": 1, "value": null}
 ```
 
 ### `POST /devices`
-Erstellt oder aktualisiert ein Gerät.
-
-**Request Body:**
+Update device value.
 ```json
-{"id": 1, "value": 50}
+{"id": 1, "value": 42.5}
 ```
-
-**Response:** `200 OK`
-```json
-{"id": 1, "value": 50}
-```
-
-**MQTT:** Publisht automatisch auf `devices/{id}/value`
 
 ### `DELETE /devices/{id}`
-Löscht ein Gerät.
+Remove device. Returns `204 No Content`.
 
-**Response:** `204 No Content`
+---
 
-**MQTT:** Publisht Delete-Event auf `devices/{id}/deleted`
+## MQTT Integration
 
-## 📡 MQTT Integration
+### Topics
+- `devices/{id}/created`
+- `devices/{id}/value`
+- `devices/{id}/deleted`
 
-Das Gateway publisht alle Änderungen automatisch auf MQTT Topics:
-
-**Topics:**
-- `devices/{id}/value` - Device Updates
+### Example Payload
 ```json
-  {"id": 1, "value": 42, "timestamp": "2024-12-21T00:15:00Z"}
+{
+  "id": 1,
+  "value": 42.5,
+  "timestamp": "2024-12-30T12:00:00Z"
+}
 ```
 
-- `devices/{id}/deleted` - Device Deletions
-```json
-  {"id": 1, "timestamp": "2024-12-21T00:15:00Z"}
-```
-
-**Subscribe Beispiele:**
+### Subscribe
 ```bash
-# Alle Device-Updates
-mosquitto_sub -h localhost -t "devices/+/value" -v
-
-# Alle Delete-Events
-mosquitto_sub -h localhost -t "devices/+/deleted" -v
-
-# Alles von Device 1
-mosquitto_sub -h localhost -t "devices/1/#" -v
+mosquitto_sub -h localhost -t "devices/#" -v
 ```
 
-## 🏗️ Architektur
+---
 
+## Configuration
+
+Edit `config.toml`:
+```toml
+[server]
+host = "127.0.0.1"
+port = 8080
+
+[mqtt]
+broker = "localhost"
+port = 1883
+client_id = "rust-gateway"
+
+[modbus]
+enabled = true
+host = "127.0.0.1"
+port = 502
+slave_id = 1
+poll_interval_ms = 1000
+
+[[modbus.registers]]
+address = 0
+count = 2           # 1=16bit, 2=32bit
+device_id = 100
+scale = 0.1
 ```
-REST API ──────┐
-               ├──> mpsc::channel ──> Event Loop ──> GatewayState
-Background ────┘                          │          (Arc<Mutex>)
-                                          ↓
-                                    MQTT Publisher
-                                          │
-                                          ↓
-                            devices/{id}/value
-                            devices/{id}/deleted
+
+---
+
+## Modbus TCP
+
+Configure registers to poll from Modbus devices:
+```toml
+[[modbus.registers]]
+address = 30775      # Register address
+count = 2            # 16bit or 32bit
+device_id = 200      # Gateway device ID
+scale = 0.01         # Scaling factor
 ```
 
-**Event-Typen:**
-- `Update{id, value}` - Gerät anlegen/ändern → MQTT publish
-- `Remove(id)` - Gerät löschen → MQTT delete event
-- `Tick(delta)` - Alle Geräte um Wert ändern
+---
 
-**Module:**
-- `main.rs` - Server-Setup & Event-Loop
-- `api/` - REST Endpoints (GET, POST, DELETE)
-- `state/` - GatewayState & Events
-- `mqtt/` - MQTT Publisher
-- `device.rs` - Device Model
+## Project Structure
+```
+gateway/
+├── src/
+│   ├── main.rs          # Bootstrap
+│   ├── api/             # REST handlers
+│   ├── state/           # Domain model
+│   ├── mqtt/            # MQTT publisher
+│   ├── modbus/          # Modbus client
+│   ├── device.rs        # Device model
+│   ├── config.rs        # Configuration
+│   └── lifecycle.rs     # Service lifecycle
+├── config.toml
+└── Cargo.toml
+```
 
-### Event-Typen
+---
 
-- `Update{id, value}` - Gerät anlegen/ändern
-- `Remove(id)` - Gerät löschen
-- `Tick(delta)` - Alle Geräte um Wert ändern
+## Core Concepts
 
-### Warum Events?
+### Event-Driven State
+```rust
+pub enum GatewayEvent {
+    DeviceCreated { id: u32 },
+    DeviceValueObserved { id: u32, value: Option<f64> },
+    Remove(u32),
+}
+```
 
-Der Event-Loop ist der einzige Ort, an dem der State geändert wird. Das verhindert Race Conditions und macht alle Änderungen nachvollziehbar. Später kann ich hier einfach Logging oder Persistierung einbauen.
+Benefits:
+- Deterministic behavior
+- No race conditions
+- Easy debugging
+- Replayable events
 
-## 🛠️ Tech Stack
+---
 
-- **Tokio** - Async Runtime für nebenläufige Tasks
-- **Axum 0.7** - HTTP Server und Routing
-- **Serde** - JSON Serialisierung
-- **rumqttc** - MQTT Client
-- **mpsc** - Asynchrone Channels für Events
+## Development
+```bash
+# Run tests
+cargo test
 
-## Nächste Schritte
+# Linting
+cargo clippy
 
-**Kurzfristig (Tag 36-40):**
-- MQTT Publisher (Updates automatisch publishen)
-- Logging mit `tracing`
-- Config-Datei statt hardcoded Werte
+# Formatting
+cargo fmt
+```
 
-**Mittelfristig (Tag 41-50):**
-- Modbus TCP Client für echte PLCs
-- OPC UA Adapter für SCADA-Systeme
-- Docker Container
+---
 
-## Kontext
+## Roadmap
 
-Das ist Tag 34 meiner [Rust-Lernreise](../README.md). Ich baue hier ein produktionsreifes IoT-Gateway, um zu lernen:
-- Event-getriebenes Design
-- Async Rust in der Praxis
-- Industrielle Protokolle
-- Backend-Architektur
+**Short-Term:**
+- Event handler separation
+- Unit/integration tests
+- Persistent event log
 
-Der Code wird kontinuierlich erweitert - aktuell ist die Core-Architektur stabil und bereit für echte Protokoll-Integrationen.
+**Mid-Term:**
+- OPC UA client
+- Metrics endpoint (Prometheus)
+- Docker container
+
+**Long-Term:**
+- WebSocket streaming
+- Plugin architecture
+- Web dashboard
+
+---
+
+## Why Rust?
+
+- Memory safety without GC
+- Zero-cost abstractions
+- Fearless concurrency
+- Modern tooling
+
+Perfect for reliable industrial systems.
+
+---
+
+## License
+
+MIT License
+
+---
+
+**Part of a [learning journey](../README.md) - production architecture, educational purpose.**
