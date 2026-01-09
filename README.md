@@ -1,122 +1,76 @@
-# 🚀 Rust Learning Gateway
+# Rust Learning Gateway
 
-**Rust lernen durch Bauen - von den Grundlagen bis zum produktionsreifen IoT-Gateway**
+Learning Rust by building a production-grade Industrial IoT gateway.
 
-Dieses Repository dokumentiert meinen Lernweg in Rust: 29 Tage Fundamentals durch tägliche Übungen, danach die Entwicklung eines echten Industrial IoT Gateways.
-
-**Hintergrund:** Ich komme aus TypeScript/Java und lerne Rust, um Backend- und Industrial-IoT-Projekte auf professionellem Level umzusetzen.
-
----
-
-## 📂 Projektstruktur
-
+## Repository Structure
 ```
-
 rust-learning-gateway/
 │
-├── days/ # Einzelne Übungs-Tage
-│ ├── day01_read_file/
-│ ├── day02_process_number_file/
-│ ├── ...
-│ └── day29_borrowing_complex_datatypes_lifecycle/
+├── days/              # Daily exercises (Day 1-29: Fundamentals)
+│   ├── day01_read_file/
+│   ├── day02_process_number_file/
+│   └── ...
 │
-├── gateway/ # Hauptprojekt / Mini-IoT-Gateway
+├── gateway/           # Main project: Industrial IoT Gateway
+│   ├── src/
+│   └── README.md
 │
 └── README.md
-
 ```
 
-
-**→ [Gateway Dokumentation ansehen](gateway/README.md)**
-
----
-
-## 📚 Übersicht der Übungstage
-
-| Tag | Projekt / Übung | Kurzbeschreibung |
-|-----|-----------------|-----------------|
-| 01  | `read_file` | Einfache Datei einlesen und Inhalt verarbeiten |
-| 02  | `process_number_file` | Zahlen aus Datei lesen und verarbeiten |
-| 03  | `to_user_message` | Zahlen in benutzerfreundliche Nachrichten umwandeln |
-| 04  | `print_description` | Structs und einfache Beschreibungen ausgeben |
-| 05  | `lifetimes` | Rust-Lifetimes und Borrowing üben |
-| 06  | `ownership_borrowing_enums` | Ownership, Borrowing und Enums vertiefen |
-| 07  | `library_book` | Kleine Bibliothek erstellen mit Funktionen und Tests |
-| 08  | `lifetimes_borrowing_advanced` | Fortgeschrittenes Borrowing und Lifetimes |
-| 09  | `testing` | Unit- und Integrationstests schreiben |
-| 10  | `cli` | Einfaches CLI-Projekt |
-| 11  | `cli_advanced` | CLI mit mehreren Commands und Fehlerhandling |
-| 12  | `cli_advanced` | Weiterführende CLI-Features |
-| 13  | `cli_commands` | Implementierung von Befehlen als Library |
-| 14  | `cli_commands` | Fortsetzung der CLI-Command-Logik |
-| 15  | `cli_commands` | Optimierung und Tests |
-| 16  | `cli_commands` | Weitere Verbesserungen und Features |
-| 17  | `ownership_borrowing_depth` | Komplexe Ownership- und Borrowing-Beispiele |
-| 18  | `fragen_beantworten` | Theoriefragen zu Rust-Konzepten |
-| 19  | `enums_result_errors` | Enums und Result für Fehlerhandling |
-| 20  | `enums_result_errors` | Weiteres Fehlerhandling und Pattern Matching |
-| 21  | `enums_result_errors` | Integration verschiedener Fehlerarten |
-| 22  | `enums_payload` | Enums mit komplexen Payloads |
-| 23  | `state_machines` | Zustandmaschinen implementieren |
-| 24  | `rust_pattern_matching_deep_dive` | Pattern Matching tiefgehend |
-| 25  | `advanced_pattern_matching` | Fortgeschrittene Pattern Matching Techniken |
-| 26  | `nested_borrowing_and_references_from_structs` | Nested Borrows und Referenzen in Structs |
-| 27  | `pattern_matching_complex_data_structures` | Komplexe Datenstrukturen mit Pattern Matching |
-| 28  | `advanced_pattern_matching_borrowed_patterns` | Borrowed Patterns und Destructuring |
-| 29  | `borrowing_complex_datatypes_lifecycle` | Komplexe Datentypen und Lebenszyklen |
+**→ [Gateway Documentation](gateway/README.md)**
 
 ---
 
-## 🌐 Industrial IoT Gateway (Hauptprojekt)
+## Learning Path
 
-Ab Tag 30 arbeite ich am Gateway - ein event-getriebenes System für industrielle IoT-Anwendungen.
+### Phase 1: Fundamentals (Days 1-29)
 
-**Aktueller Stand:**
-- ✅ Event-basierte Architektur (Single-Writer-Pattern)
-- ✅ REST API mit Axum
-- ✅ Async Runtime mit Tokio
-- ✅ Background-Tasks für Polling
-- ✅ Thread-sichere State-Verwaltung
+Focused exercises on core Rust concepts:
 
-**Geplant:**
-- MQTT Publisher/Subscriber
-- Modbus TCP Client
-- OPC UA Adapter
-- Config-Management
-- Docker Deployment
+- Ownership, borrowing & lifetimes
+- Pattern matching & enums
+- Error handling (`Result`, `Option`)
+- Traits & generics
+- Testing & CLI tools
+- State machines
+- Complex data structures
 
-**→ [Vollständige Dokumentation und Architektur](gateway/README.md)**
+### Phase 2: Production System (Day 30+)
 
-### 💻 Gateway starten
-```bash
-cd gateway
-cargo run
+Industrial IoT gateway with production-grade architecture:
 
-# Testen
-curl http://127.0.0.1:3000/devices
-```
+- Event-driven design (single-writer pattern)
+- REST API (Axum)
+- Async runtime (Tokio)
+- MQTT integration
+- Modbus TCP client
+- Configuration system
+- Structured logging
 
 ---
 
-## ⚡ Was dieses Repo zeigt
+## Tech Stack
 
-- **Tag 1-29:** Rust Fundamentals durch praktische Übungen
-  - Ownership & Borrowing
-  - Pattern Matching (einfach bis komplex)
-  - Fehlerbehandlung mit `Result` und `Option`
-  - State Machines und komplexe Datenstrukturen
-  
-- **Ab Tag 30:** Produktionsreifes IoT-Gateway
-  - Event-driven Architecture
-  - Async Rust in der Praxis
-  - REST APIs und Background-Tasks
-  - Vorbereitung für Modbus/OPC-UA/MQTT
+- **Rust** (stable)
+- **Tokio** (async runtime)
+- **Axum** (web framework)
+- **MQTT** (rumqttc)
+- **Modbus TCP** (tokio-modbus)
+- **Serde** (serialization)
 
 ---
 
-## 🔗 Hinweise
+## Getting Started
 
-- Dieses Repository ist **öffentlich** und dokumentiert kontinuierlichen Lernfortschritt
-- Tages-Übungen (Tag 1-29) sind abgeschlossen und können einzeln ausgeführt werden
-- Gateway-Entwicklung läuft kontinuierlich weiter (ab Tag 30)
-- Jeder Commit zeigt echte Lernschritte - mit Fehlern, Refactorings und Verbesserungen
+See [gateway/README.md](gateway/README.md) for:
+- Quick start guide
+- API documentation
+- Configuration options
+- Architecture details
+
+---
+
+## License
+
+MIT License
