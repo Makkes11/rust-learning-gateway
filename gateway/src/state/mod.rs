@@ -10,10 +10,16 @@ pub enum GatewayEvent {
     Remove(u32),
 }
 
+#[derive(Debug, Clone)]
 pub enum StateChange {
     DeviceCreated { id: u32 },
     DeviceUpdated { id: u32, value: Option<f64> },
     DeviceRemoved { id: u32 },
+}
+
+#[async_trait::async_trait]
+pub trait StateListener: Send + Sync + 'static {
+    async fn on_event(&self, event: StateChange);
 }
 
 #[derive(Debug)]
@@ -85,4 +91,25 @@ impl GatewayState {
 pub struct AppState {
     pub tx: Sender<GatewayEvent>,
     pub state: Arc<Mutex<GatewayState>>,
+}
+
+pub struct Dispatcher {
+    listeners: Vec<Arc<dyn StateListener>>,
+}
+
+impl Dispatcher {
+    pub fn new(listeners: Vec<Arc<dyn StateListener>>) -> Self {
+        Self { listeners }
+    }
+
+    pub fn dispatch(&self, event: StateChange) {
+        for listener in &self.listeners {
+            let listener_arc = Arc::clone(listener);
+            let event_clone = event.clone();
+
+            tokio::spawn(async move {
+                listener_arc.on_event(event_clone).await;
+            });
+        }
+    }
 }

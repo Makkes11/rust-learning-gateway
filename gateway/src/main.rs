@@ -14,12 +14,15 @@ mod modbus;
 mod mqtt;
 mod state;
 
-use crate::api::{create_device, delete_device, get_devices, update_device};
-use crate::config::Config;
 use crate::lifecycle::Lifecycle;
 use crate::modbus::ModbusPoller;
 use crate::mqtt::MqttPublisher;
 use crate::state::{AppState, GatewayEvent, GatewayState};
+use crate::{
+    api::{create_device, delete_device, get_devices, update_device},
+    state::StateListener,
+};
+use crate::{config::Config, state::Dispatcher};
 use tracing::{debug, error, info, warn};
 
 fn spawn_service<T: Lifecycle>(service: T, shutdown: broadcast::Receiver<()>) {
@@ -53,7 +56,10 @@ async fn main() {
     // Mutex = jeweils nur EIN Task darf ihn ändern
     let shared_state = Arc::new(Mutex::new(GatewayState::new()));
 
-    let mqtt = match MqttPublisher::new(
+    let mut listeners: Vec<Arc<dyn StateListener>> = Vec::new();
+
+    // mqtt_service variable no longer needed now
+    let _ = match MqttPublisher::new(
         &config.mqtt.broker,
         config.mqtt.port,
         &config.mqtt.client_id,
@@ -62,13 +68,17 @@ async fn main() {
     {
         Ok(p) => {
             info!("✓ MQTT connected successfully");
-            Some(Arc::new(p))
+            let arc_mqtt = Arc::new(p);
+            listeners.push(arc_mqtt.clone());
+            Some(arc_mqtt)
         }
         Err(err) => {
             warn!("✗ MQTT connection failed, running without MQTT: {}", err);
             None
         }
     };
+
+    let dispatcher = Arc::new(Dispatcher::new(listeners));
 
     // Sende Startzustände devices mit Events --> auch in MQTT
     tx.send(GatewayEvent::DeviceCreated { id: 1 })
@@ -96,7 +106,7 @@ async fn main() {
     // Dieser Task ist der EINZIGE Ort, an dem der State verändert wird.
     let event_state = shared_state.clone();
 
-    let mqtt_clone = mqtt.clone();
+    let event_dispatcher = dispatcher.clone(); // Arc klonen für den Task
 
     tokio::spawn(async move {
         while let Some(event) = rx.recv().await {
@@ -115,33 +125,14 @@ async fn main() {
                     Ok(sc) => sc,
                     Err(e) => {
                         error!("{}", e);
-                        return;
+                        continue; // Bei Fehler im State-Update zum nächsten Event springen
                     }
                 }
             };
 
-            if let Some(s) = state_change {
-                match s {
-                    state::StateChange::DeviceCreated { id } => {
-                        if let Some(mqtt) = &mqtt_clone {
-                            mqtt.create_device(id).await;
-                        }
-                    }
-                    state::StateChange::DeviceUpdated { id, value } => {
-                        if let Some(val) = value {
-                            debug!("Processing Update event: id={}, value={}", id, val);
-
-                            if let Some(mqtt) = &mqtt_clone {
-                                mqtt.publish_device_update(id, val).await;
-                            }
-                        }
-                    }
-                    state::StateChange::DeviceRemoved { id } => {
-                        if let Some(mqtt) = &mqtt_clone {
-                            mqtt.delete_device(id).await;
-                        }
-                    }
-                }
+            // Der Dispatcher übernimmt die Verteilung
+            if let Some(change) = state_change {
+                event_dispatcher.dispatch(change);
             }
         }
     });

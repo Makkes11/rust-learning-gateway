@@ -1,3 +1,4 @@
+use crate::state::{StateChange, StateListener};
 use rumqttc::{AsyncClient, MqttOptions, QoS};
 use serde_json::json;
 use std::time::Duration;
@@ -81,6 +82,25 @@ impl MqttPublisher {
             .await
         {
             eprintln!("MQTT publish failed: {err}");
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl StateListener for MqttPublisher {
+    async fn on_event(&self, event: StateChange) {
+        match event {
+            StateChange::DeviceCreated { id } => {
+                self.create_device(id).await;
+            }
+            StateChange::DeviceUpdated { id, value } => {
+                if let Some(val) = value {
+                    self.publish_device_update(id, val).await;
+                }
+            }
+            StateChange::DeviceRemoved { id } => {
+                self.delete_device(id).await;
+            }
         }
     }
 }
