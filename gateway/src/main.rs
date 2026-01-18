@@ -10,6 +10,7 @@ mod api;
 mod config;
 mod device;
 mod lifecycle;
+mod logging;
 mod modbus;
 mod mqtt;
 mod state;
@@ -57,9 +58,9 @@ async fn main() {
     let shared_state = Arc::new(Mutex::new(GatewayState::new()));
 
     let mut listeners: Vec<Arc<dyn StateListener>> = Vec::new();
+    listeners.push(Arc::new(logging::ConsoleLogger::new()));
 
-    // mqtt_service variable no longer needed now
-    let _ = match MqttPublisher::new(
+    let mqtt_service = match MqttPublisher::new(
         &config.mqtt.broker,
         config.mqtt.port,
         &config.mqtt.client_id,
@@ -68,9 +69,7 @@ async fn main() {
     {
         Ok(p) => {
             info!("✓ MQTT connected successfully");
-            let arc_mqtt = Arc::new(p);
-            listeners.push(arc_mqtt.clone());
-            Some(arc_mqtt)
+            Some(Arc::new(p))
         }
         Err(err) => {
             warn!("✗ MQTT connection failed, running without MQTT: {}", err);
@@ -78,9 +77,12 @@ async fn main() {
         }
     };
 
+    if let Some(mqtt) = &mqtt_service {
+        listeners.push(mqtt.clone()); // mqtt is already an Arc
+    }
+
     let dispatcher = Arc::new(Dispatcher::new(listeners));
 
-    // Sende Startzustände devices mit Events --> auch in MQTT
     tx.send(GatewayEvent::DeviceCreated { id: 1 })
         .await
         .unwrap();
@@ -103,7 +105,6 @@ async fn main() {
     // -------------------------
     // EVENT-LOOP TASK
     // -------------------------
-    // Dieser Task ist der EINZIGE Ort, an dem der State verändert wird.
     let event_state = shared_state.clone();
 
     let event_dispatcher = dispatcher.clone(); // Arc klonen für den Task
@@ -125,12 +126,11 @@ async fn main() {
                     Ok(sc) => sc,
                     Err(e) => {
                         error!("{}", e);
-                        continue; // Bei Fehler im State-Update zum nächsten Event springen
+                        continue;
                     }
                 }
             };
 
-            // Der Dispatcher übernimmt die Verteilung
             if let Some(change) = state_change {
                 event_dispatcher.dispatch(change);
             }
@@ -192,7 +192,6 @@ async fn main() {
         });
     }
 
-    // AppState bündelt tx und shared_state
     let app_state = AppState {
         tx: tx.clone(),
         state: shared_state.clone(),

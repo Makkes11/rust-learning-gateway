@@ -1,4 +1,4 @@
-use crate::state::{StateChange, StateListener};
+use crate::state::{ListenerError, StateChange, StateListener};
 use rumqttc::{AsyncClient, MqttOptions, QoS};
 use serde_json::json;
 use std::time::Duration;
@@ -24,10 +24,10 @@ impl MqttPublisher {
             }
         });
 
-        Ok(Self { client })
+        Result::Ok(Self { client })
     }
 
-    pub async fn publish_device_update(&self, id: u32, value: f64) {
+    pub async fn publish_device_update(&self, id: u32, value: f64) -> Result<(), ListenerError> {
         let topic = format!("devices/{}/value", id);
 
         debug!("Publishing to MQTT: topic={}, value={}", topic, value);
@@ -38,16 +38,10 @@ impl MqttPublisher {
             "timestamp": chrono::Utc::now().to_rfc3339()
         });
 
-        if let Err(err) = self
-            .client
-            .publish(topic, QoS::AtLeastOnce, false, payload.to_string())
-            .await
-        {
-            error!("MQTT publish failed: {}", err);
-        }
+        self.send_to_mqtt(topic, payload).await
     }
 
-    pub async fn delete_device(&self, id: u32) {
+    pub async fn delete_device(&self, id: u32) -> Result<(), ListenerError> {
         let topic = format!("devices/{}/deleted", id);
 
         debug!("Publishing to MQTT: topic={}, id={}", topic, id);
@@ -57,16 +51,10 @@ impl MqttPublisher {
             "timestamp": chrono::Utc::now().to_rfc3339()
         });
 
-        if let Err(err) = self
-            .client
-            .publish(topic, QoS::AtLeastOnce, false, payload.to_string())
-            .await
-        {
-            eprintln!("MQTT publish failed: {err}");
-        }
+        self.send_to_mqtt(topic, payload).await
     }
 
-    pub async fn create_device(&self, id: u32) {
+    pub async fn create_device(&self, id: u32) -> Result<(), ListenerError> {
         let topic = format!("devices/{}/created", id);
 
         debug!("Publishing to MQTT: topic={}, id={}", topic, id);
@@ -76,31 +64,42 @@ impl MqttPublisher {
             "timestamp": chrono::Utc::now().to_rfc3339()
         });
 
-        if let Err(err) = self
+        self.send_to_mqtt(topic, payload).await
+    }
+
+    async fn send_to_mqtt(
+        &self,
+        topic: String,
+        payload: serde_json::Value,
+    ) -> Result<(), ListenerError> {
+        // 1. Convert payload to string
+        let payload_str = payload.to_string();
+
+        let result = self
             .client
-            .publish(topic, QoS::AtLeastOnce, false, payload.to_string())
-            .await
-        {
-            eprintln!("MQTT publish failed: {err}");
+            .publish(topic, QoS::AtLeastOnce, false, payload_str)
+            .await;
+
+        match result {
+            Err(e) => Err(ListenerError::Mqtt(e.to_string())),
+            Ok(_) => Ok(()),
         }
     }
 }
 
 #[async_trait::async_trait]
 impl StateListener for MqttPublisher {
-    async fn on_event(&self, event: StateChange) {
+    async fn on_event(&self, event: StateChange) -> Result<(), ListenerError> {
         match event {
-            StateChange::DeviceCreated { id } => {
-                self.create_device(id).await;
-            }
+            StateChange::DeviceCreated { id } => self.create_device(id).await,
             StateChange::DeviceUpdated { id, value } => {
                 if let Some(val) = value {
-                    self.publish_device_update(id, val).await;
+                    self.publish_device_update(id, val).await
+                } else {
+                    Ok(())
                 }
             }
-            StateChange::DeviceRemoved { id } => {
-                self.delete_device(id).await;
-            }
+            StateChange::DeviceRemoved { id } => self.delete_device(id).await,
         }
     }
 }

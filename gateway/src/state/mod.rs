@@ -19,7 +19,8 @@ pub enum StateChange {
 
 #[async_trait::async_trait]
 pub trait StateListener: Send + Sync + 'static {
-    async fn on_event(&self, event: StateChange);
+    // Methods now return Result to allow for centralized error reporting
+    async fn on_event(&self, event: StateChange) -> Result<(), ListenerError>;
 }
 
 #[derive(Debug)]
@@ -108,8 +109,28 @@ impl Dispatcher {
             let event_clone = event.clone();
 
             tokio::spawn(async move {
-                listener_arc.on_event(event_clone).await;
+                if let Err(e) = listener_arc.on_event(event_clone).await {
+                    // Centralized logging for all side-effect errors
+                    tracing::error!("Listener failed to process event: {:?}", e);
+                }
             });
         }
+    }
+}
+
+#[derive(Debug)]
+pub enum ListenerError {
+    Mqtt(String),
+    Logging(String),
+    General(String),
+}
+
+impl fmt::Display for ListenerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let msg = match self {
+            ListenerError::Mqtt(e) | ListenerError::Logging(e) | ListenerError::General(e) => e,
+        };
+
+        write!(f, "{msg}")
     }
 }
