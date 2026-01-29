@@ -103,17 +103,12 @@ impl Dispatcher {
         Self { listeners }
     }
 
-    pub fn dispatch(&self, event: StateChange) {
+    pub async fn dispatch(&self, event: StateChange) {
         for listener in &self.listeners {
-            let listener_arc = Arc::clone(listener);
-            let event_clone = event.clone();
-
-            tokio::spawn(async move {
-                if let Err(e) = listener_arc.on_event(event_clone).await {
-                    // Centralized logging for all side-effect errors
-                    tracing::error!("Listener failed to process event: {:?}", e);
-                }
-            });
+            if let Err(e) = listener.on_event(event.clone()).await {
+                // Centralized logging for all side-effect errors
+                tracing::error!("Listener failed to process event: {:?}", e);
+            };
         }
     }
 }

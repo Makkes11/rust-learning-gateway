@@ -132,7 +132,7 @@ async fn main() {
             };
 
             if let Some(change) = state_change {
-                event_dispatcher.dispatch(change);
+                event_dispatcher.dispatch(change).await;
             }
         }
     });

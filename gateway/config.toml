@@ -8,7 +8,7 @@ port = 1883
 client_id = "rust-gateway"
 
 [modbus]
-enabled = true # true if real modbus
+enabled = false # true if real modbus
 host = "127.0.0.1"
 port = 5020
 slave_id = 1
