@@ -105,6 +105,7 @@ impl Dispatcher {
 
     pub async fn dispatch(&self, event: StateChange) {
         for listener in &self.listeners {
+            // await on_event - sequential execution preserves listener order
             if let Err(e) = listener.on_event(event.clone()).await {
                 // Centralized logging for all side-effect errors
                 tracing::error!("Listener failed to process event: {:?}", e);

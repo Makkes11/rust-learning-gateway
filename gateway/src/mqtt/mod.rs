@@ -32,6 +32,7 @@ impl MqttPublisher {
 
         debug!("Publishing to MQTT: topic={}, value={}", topic, value);
 
+        // timestamp is generated, not the state change timestamp
         let payload = json!({
             "id": id,
             "value": value,
@@ -46,6 +47,7 @@ impl MqttPublisher {
 
         debug!("Publishing to MQTT: topic={}, id={}", topic, id);
 
+        // timestamp is generated, not the state change timestamp
         let payload = json!({
             "id": id,
             "timestamp": chrono::Utc::now().to_rfc3339()
@@ -59,6 +61,7 @@ impl MqttPublisher {
 
         debug!("Publishing to MQTT: topic={}, id={}", topic, id);
 
+        // timestamp is generated, not the state change timestamp
         let payload = json!({
             "id": id,
             "timestamp": chrono::Utc::now().to_rfc3339()
@@ -93,6 +96,8 @@ impl StateListener for MqttPublisher {
         match event {
             StateChange::DeviceCreated { id } => self.create_device(id).await,
             StateChange::DeviceUpdated { id, value } => {
+                // assumed value change, but not guaranteed
+                // listener should be idempotent to repeated updates
                 if let Some(val) = value {
                     self.publish_device_update(id, val).await
                 } else {
