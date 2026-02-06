@@ -9,6 +9,7 @@ use tokio::{net::TcpListener, select, sync::broadcast, time::sleep};
 mod api;
 mod config;
 mod device;
+mod dispatcher;
 mod lifecycle;
 mod logging;
 mod modbus;
@@ -23,7 +24,7 @@ use crate::{
     api::{create_device, delete_device, get_devices, update_device},
     state::StateListener,
 };
-use crate::{config::Config, state::Dispatcher};
+use crate::{config::Config, dispatcher::Dispatcher};
 use tracing::{debug, error, info, warn};
 
 fn spawn_service<T: Lifecycle>(service: T, shutdown: broadcast::Receiver<()>) {
