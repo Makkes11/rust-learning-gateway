@@ -6,25 +6,20 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::{net::TcpListener, select, sync::broadcast, time::sleep};
 
-mod api;
+mod adapters;
 mod config;
-mod device;
-mod dispatcher;
-mod lifecycle;
+mod core;
 mod logging;
-mod modbus;
-mod mqtt;
-mod state;
 
-use crate::lifecycle::Lifecycle;
-use crate::modbus::ModbusPoller;
-use crate::mqtt::MqttPublisher;
-use crate::state::{AppState, GatewayEvent, GatewayState};
+use crate::adapters::modbus::ModbusPoller;
+use crate::adapters::mqtt::MqttPublisher;
+use crate::core::lifecycle::Lifecycle;
+use crate::core::state::{AppState, GatewayEvent, GatewayState};
 use crate::{
-    api::{create_device, delete_device, get_devices, update_device},
-    state::StateListener,
+    adapters::api::{create_device, delete_device, get_devices, update_device},
+    core::state::StateListener,
 };
-use crate::{config::Config, dispatcher::Dispatcher};
+use crate::{config::Config, core::dispatcher::Dispatcher};
 use tracing::{debug, error, info, warn};
 
 fn spawn_service<T: Lifecycle>(service: T, shutdown: broadcast::Receiver<()>) {

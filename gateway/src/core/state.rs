@@ -1,4 +1,4 @@
-use crate::device::Device;
+use crate::core::device::Device;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::Sender;
 use tracing::info;

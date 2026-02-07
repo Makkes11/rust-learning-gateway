@@ -1,4 +1,4 @@
-use crate::state::{StateChange, StateListener};
+use crate::core::state::{StateChange, StateListener};
 use std::sync::Arc;
 
 pub struct Dispatcher {
@@ -25,7 +25,7 @@ impl Dispatcher {
 mod tests {
 
     use super::*;
-    use crate::state::{ListenerError, StateChange, StateListener};
+    use crate::core::state::{ListenerError, StateChange, StateListener};
 
     use std::sync::{Arc, Mutex};
 

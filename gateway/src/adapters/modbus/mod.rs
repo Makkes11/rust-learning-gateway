@@ -1,6 +1,6 @@
 use crate::config::ModbusConfig;
-use crate::lifecycle::Lifecycle;
-use crate::state::GatewayEvent;
+use crate::core::lifecycle::Lifecycle;
+use crate::core::state::GatewayEvent;
 use anyhow::Result;
 use async_trait::async_trait;
 use tokio::select;
