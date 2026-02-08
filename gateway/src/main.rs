@@ -3,30 +3,24 @@ use axum::{
     routing::{post, put},
 };
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use tokio::{net::TcpListener, select, sync::broadcast, time::sleep};
+use tokio::net::TcpListener;
 
 mod adapters;
 mod config;
 mod core;
 mod logging;
 
-use crate::adapters::modbus::ModbusPoller;
-use crate::adapters::mqtt::MqttPublisher;
-use crate::core::lifecycle::Lifecycle;
+use crate::adapters::{
+    modbus::ModbusPoller, simulation::SimulationPoller, spawn_service::spawn_service,
+};
 use crate::core::state::{AppState, GatewayEvent, GatewayState};
 use crate::{
     adapters::api::{create_device, delete_device, get_devices, update_device},
     core::state::StateListener,
 };
+use crate::{adapters::mqtt::MqttPublisher, config::SourceMode};
 use crate::{config::Config, core::dispatcher::Dispatcher};
 use tracing::{debug, error, info, warn};
-
-fn spawn_service<T: Lifecycle>(service: T, shutdown: broadcast::Receiver<()>) {
-    tokio::spawn(async move {
-        service.run(shutdown).await;
-    });
-}
 
 #[tokio::main]
 async fn main() {
@@ -39,9 +33,9 @@ async fn main() {
     let config = Config::load_or_default();
     info!(
         "Config loaded: server={}:{}, mqtt={}:{}",
-        config.server.host, config.server.port, config.mqtt.broker, config.mqtt.port
+        config.api.host, config.api.port, config.mqtt.broker, config.mqtt.port
     );
-    info!("Polling: {}ms", config.polling.interval_ms);
+    info!("Polling: {}ms", config.modbus.poll_interval_ms);
 
     let (shutdown_tx, _shutdown_rx) = tokio::sync::broadcast::channel::<()>(1);
 
@@ -99,6 +93,20 @@ async fn main() {
     .unwrap();
 
     // -------------------------
+    // MODBUS-POLLER / SIMULATION-POLLER TASK
+    // -------------------------
+    match config.mode {
+        SourceMode::Modbus => {
+            let modbus = ModbusPoller::new(config.modbus.clone(), tx.clone());
+            spawn_service(modbus, shutdown_tx.subscribe());
+        }
+        SourceMode::Simulation => {
+            let sim = SimulationPoller::new(config.simulation.clone(), tx.clone());
+            spawn_service(sim, shutdown_tx.subscribe());
+        }
+    }
+
+    // -------------------------
     // EVENT-LOOP TASK
     // -------------------------
     let event_state = shared_state.clone();
@@ -133,61 +141,6 @@ async fn main() {
         }
     });
 
-    // -------------------------
-    // MODBUS POLLING TASK
-    // -------------------------
-    if config.modbus.enabled {
-        let modbus_poller = ModbusPoller::new(config.modbus.clone(), tx.clone());
-        let shutdown_rx = shutdown_tx.subscribe();
-        spawn_service(modbus_poller, shutdown_rx);
-        info!("Modbus polling task started");
-    }
-
-    // -------------------------
-    // BACKGROUND TICK TASK
-    // -------------------------
-    // task creates only events, not changing the state
-    if config.simulation.enabled {
-        let tx2 = tx.clone();
-        let mut tick_shutdown = shutdown_tx.subscribe();
-        let event_state = shared_state.clone();
-        let snapshot = {
-            match event_state.lock() {
-                Ok(state) => state.devices.clone(),
-                Err(_) => {
-                    error!("Mutex poisoned in simulation task");
-                    return; // Task beenden
-                }
-            }
-        };
-        tokio::spawn(async move {
-            loop {
-                select! {
-                    _ = sleep(Duration::from_millis(config.simulation.interval_ms)) => {
-                        for dev in &snapshot {
-                            if let Some(val) = dev.value {
-                                 let new_value = val + config.simulation.add_value as f64;
-                            let _ = tx2.send(GatewayEvent::DeviceValueObserved {
-                                id: dev.id,
-                                value: Some(new_value),
-                            })
-                            .await;
-                            }
-
-                        }
-                    }
-
-                    _ = tick_shutdown.recv() => {
-                        info!("Background tick task shutting down");
-                        break;
-                    }
-                }
-            }
-
-            info!("Background tick task stopped");
-        });
-    }
-
     let app_state = AppState {
         tx: tx.clone(),
         state: shared_state.clone(),
@@ -201,7 +154,7 @@ async fn main() {
         .route("/devices/{id}", put(create_device).delete(delete_device))
         .with_state(app_state);
 
-    let addr = format!("{}:{}", config.server.host, config.server.port);
+    let addr = format!("{}:{}", config.api.host, config.api.port);
     let listener = TcpListener::bind(&addr).await.unwrap();
 
     info!("HTTP server listening on {}", addr);

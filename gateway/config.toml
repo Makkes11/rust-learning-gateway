@@ -1,4 +1,7 @@
-[server]
+[mode]
+source = "simulation" # simulation | modbus
+
+[api]
 host = "127.0.0.1"
 port = 8080
 
@@ -8,11 +11,10 @@ port = 1883
 client_id = "rust-gateway"
 
 [modbus]
-enabled = false # true if real modbus
 host = "127.0.0.1"
 port = 5020
 slave_id = 1
-poll_interval_ms = 1000 
+poll_interval_ms = 1000
 
 [[modbus.registers]]
 address = 0
@@ -26,10 +28,6 @@ count = 2
 device_id = 2
 scale = 0.1
 
-[polling]
-interval_ms = 2000
-
 [simulation]
 interval_ms = 2000
 add_value = 1
-enabled = false

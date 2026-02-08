@@ -1,21 +1,16 @@
 use std::error::Error;
 
-#[derive(Debug, serde::Deserialize)]
-pub struct ServerConfig {
+#[derive(Debug, serde::Deserialize, Clone)]
+pub struct ApiConfig {
     pub host: String,
     pub port: u16,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, Clone)]
 pub struct MqttConfig {
     pub broker: String,
     pub port: u16,
     pub client_id: String,
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub struct PollingConfig {
-    pub interval_ms: u64,
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]
@@ -28,7 +23,6 @@ pub struct RegisterMapping {
 
 #[derive(Debug, serde::Deserialize, Clone)]
 pub struct ModbusConfig {
-    pub enabled: bool,
     pub host: String,
     pub port: u16,
     pub slave_id: u8,
@@ -37,19 +31,24 @@ pub struct ModbusConfig {
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]
-pub struct SimulationTickConfig {
-    pub enabled: bool,
+pub struct SimulationConfig {
     pub interval_ms: u64,
     pub add_value: i32,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, PartialEq, Clone)]
+pub enum SourceMode {
+    Simulation,
+    Modbus,
+}
+
+#[derive(Debug, serde::Deserialize, Clone)]
 pub struct Config {
-    pub server: ServerConfig,
+    pub mode: SourceMode,
+    pub api: ApiConfig,
     pub mqtt: MqttConfig,
-    pub polling: PollingConfig,
     pub modbus: ModbusConfig,
-    pub simulation: SimulationTickConfig,
+    pub simulation: SimulationConfig,
 }
 
 impl Config {
@@ -60,7 +59,7 @@ impl Config {
 
     pub fn load_or_default() -> Self {
         Config::load().unwrap_or_else(|_| {
-            eprintln!("⚠ config.toml not found, use defaults");
+            eprintln!("⚠ config.toml not found, using defaults");
             Config::default()
         })
     }
@@ -69,32 +68,38 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            server: ServerConfig {
+            mode: SourceMode::Simulation,
+            api: ApiConfig {
                 host: "127.0.0.1".into(),
-                port: 3000,
+                port: 8080,
             },
             mqtt: MqttConfig {
                 broker: "localhost".into(),
                 port: 1883,
                 client_id: "rust-gateway".into(),
             },
-            polling: PollingConfig { interval_ms: 500 },
             modbus: ModbusConfig {
-                enabled: false,
                 host: "127.0.0.1".into(),
-                port: 502,
+                port: 5020,
                 slave_id: 1,
                 poll_interval_ms: 1000,
-                registers: vec![RegisterMapping {
-                    address: 0,
-                    count: 10,
-                    device_id: 100,
-                    scale: 1.0,
-                }],
+                registers: vec![
+                    RegisterMapping {
+                        address: 0,
+                        count: 1,
+                        device_id: 1,
+                        scale: 1.0,
+                    },
+                    RegisterMapping {
+                        address: 5,
+                        count: 2,
+                        device_id: 2,
+                        scale: 0.1,
+                    },
+                ],
             },
-            simulation: SimulationTickConfig {
-                enabled: false,
-                interval_ms: 1000,
+            simulation: SimulationConfig {
+                interval_ms: 2000,
                 add_value: 1,
             },
         }
