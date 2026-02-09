@@ -97,14 +97,13 @@ pub struct AppState {
 #[derive(Debug)]
 pub enum ListenerError {
     Mqtt(String),
-    Logging(String),
     General(String),
 }
 
 impl fmt::Display for ListenerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let msg = match self {
-            ListenerError::Mqtt(e) | ListenerError::Logging(e) | ListenerError::General(e) => e,
+            ListenerError::Mqtt(e) | ListenerError::General(e) => e,
         };
 
         write!(f, "{msg}")
