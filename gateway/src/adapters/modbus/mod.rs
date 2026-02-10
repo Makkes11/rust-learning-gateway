@@ -70,8 +70,9 @@ impl ModbusPoller {
             match self.poll_once(&mut ctx).await {
                 Ok(_) => debug!("Modbus poll successful"),
                 Err(e) => {
-                    error!("Modbus poll failed: {}", e);
-                    return Err(e);
+                    error!("Modbus poll failed: {}, retrying...", e);
+                    sleep(Duration::from_secs(1)).await;
+                    continue;
                 }
             }
 

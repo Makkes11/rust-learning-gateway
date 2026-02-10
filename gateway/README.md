@@ -219,7 +219,7 @@ The project currently relies on manual testing via REST, MQTT subscriptions, and
 
 ## Deployment
 
-- Local execution via `cargo run`
+- Local execution via `cargo run`or `RUST_LOG=debug cargo run`
 - Docker and docker-compose support planned but not yet implemented
 - systemd service example planned for Linux edge deployment
 
