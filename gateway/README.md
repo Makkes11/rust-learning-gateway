@@ -1,106 +1,76 @@
 # Industrial IoT Gateway
 
-Production-grade, event-driven Industrial IoT gateway written in Rust.
+Event-driven edge gateway for industrial systems with Modbus TCP integration, MQTT distribution, and REST API.
 
----
+## Overview
+
+This gateway connects industrial devices through a deterministic, event-driven architecture. It polls machine data via Modbus TCP, processes events through a single-writer loop, and exposes data via MQTT and REST API.
+
+**Design Principle:** External inputs generate events that are processed serially. Side effects (MQTT, logging) are separated from state mutations, ensuring deterministic behavior, easy debugging, and clean extensibility.
+
+## Problem & Solution
+
+**Problem:** Industrial edge systems must handle unstable networks, external protocols, and concurrent data sources without producing inconsistent state or hard-to-reproduce errors.
+
+**Solution:** Centralized event model with a single-writer pattern for state mutations. External inputs (API, Modbus, simulation) generate events that are processed serially. Side effects like MQTT publishing are clearly separated from state.
 
 ## Features
 
-- Event-driven architecture (single-writer pattern)
-- REST API (Axum)
+- Event-driven architecture with single-writer state pattern
+- Modbus TCP polling
 - MQTT publishing
-- Modbus TCP client
-- Async runtime (Tokio)
-- Graceful shutdown
-- Configuration-driven
+- REST API for device management
+- Deterministic simulation mode
+- Graceful shutdown handling
 - Structured logging
-
----
+- Configuration-driven operation
 
 ## Architecture
 ```
-REST API / Modbus / Background Tasks
+External Adapters (API, Modbus, Simulation)
             ↓
-    mpsc::channel (Events)
+    GatewayEvents → mpsc::channel
             ↓
-      Event Loop (Single Writer)
+      Dispatcher (Single Writer)
             ↓
-    ┌───────┴────────┐
-    ↓                ↓
-GatewayState    Side Effects
-(Arc<Mutex>)    (MQTT, Logging)
+       GatewayState (mutated serially)
+            ↓
+    StateChange Events → Listeners
+            ↓
+    Side Effects (MQTT, Logging)
 ```
 
-**Key Principle:** All state changes flow through a single event loop - no race conditions.
+**Key Components:**
 
----
+- **core/** - Domain logic and state management
+- **adapters/** - External interfaces (API, Modbus, MQTT, Simulation)
+- **transport/** - Event transport layer
+- **config.rs** - Configuration loading
 
 ## Quick Start
+
+### Requirements
+
+- Rust stable toolchain
+- Cargo
+- Optional: MQTT broker (e.g., Mosquitto)
+
+### Installation
 ```bash
+git clone <repository-url>
 cd gateway
 cargo run
-
-# With debug logging
-RUST_LOG=debug cargo run
-
-# Server starts on http://127.0.0.1:8080
 ```
 
----
-
-## API Reference
-
-### `GET /devices`
-List all devices.
-```json
-[{"id": 1, "value": 42.5}]
-```
-
-### `PUT /devices/{id}`
-Create device.
-```json
-{"id": 1, "value": null}
-```
-
-### `POST /devices`
-Update device value.
-```json
-{"id": 1, "value": 42.5}
-```
-
-### `DELETE /devices/{id}`
-Remove device. Returns `204 No Content`.
-
----
-
-## MQTT Integration
-
-### Topics
-- `devices/{id}/created`
-- `devices/{id}/value`
-- `devices/{id}/deleted`
-
-### Example Payload
-```json
-{
-  "id": 1,
-  "value": 42.5,
-  "timestamp": "2024-12-30T12:00:00Z"
-}
-```
-
-### Subscribe
-```bash
-mosquitto_sub -h localhost -t "devices/#" -v
-```
-
----
+Server starts on `http://127.0.0.1:8080`
 
 ## Configuration
 
 Edit `config.toml`:
 ```toml
-[server]
+mode = "Modbus" # or "Simulation"
+
+[api]
 host = "127.0.0.1"
 port = 8080
 
@@ -110,7 +80,6 @@ port = 1883
 client_id = "rust-gateway"
 
 [modbus]
-enabled = true
 host = "127.0.0.1"
 port = 502
 slave_id = 1
@@ -118,111 +87,161 @@ poll_interval_ms = 1000
 
 [[modbus.registers]]
 address = 0
-count = 2           # 1=16bit, 2=32bit
+count = 2
 device_id = 100
 scale = 0.1
+
+[simulation]
+interval_ms = 2000
+add_value = 1
 ```
+**Notes:**
 
----
+- Data source selection is controlled via `mode`.
+- Only one source (Modbus or Simulation) runs at a time.
+- No runtime enable/disable flags are used.
 
-## Modbus TCP
-
-Configure registers to poll from Modbus devices:
-```toml
-[[modbus.registers]]
-address = 30775      # Register address
-count = 2            # 16bit or 32bit
-device_id = 200      # Gateway device ID
-scale = 0.01         # Scaling factor
+## Source Layout
 ```
-
----
-
-## Project Structure
-```
-gateway/
-├── src/
-│   ├── main.rs          # Bootstrap
-│   ├── api/             # REST handlers
-│   ├── state/           # Domain model
+src/
+├── adapters/            # External interfaces
+│   ├── api/             # REST API (Axum)
+│   ├── modbus/          # Modbus TCP poller
 │   ├── mqtt/            # MQTT publisher
-│   ├── modbus/          # Modbus client
-│   ├── device.rs        # Device model
-│   ├── config.rs        # Configuration
-│   └── lifecycle.rs     # Service lifecycle
-├── config.toml
-└── Cargo.toml
+│   ├── simulation/      # Simulation data source
+│   └── spawn_service.rs # Lifecycle task spawning
+│
+├── core/                # Domain and state logic
+│   ├── device.rs
+│   ├── dispatcher.rs
+│   ├── lifecycle.rs
+│   └── state.rs
+│
+├── logging/             # Logging listeners
+├── transport/           # Event transport abstractions
+├── config.rs            # Configuration model + loading
+└── main.rs              # Application bootstrap
 ```
 
----
+## API Reference
 
-## Core Concepts
+### REST Endpoints
 
-### Event-Driven State
-```rust
-pub enum GatewayEvent {
-    DeviceCreated { id: u32 },
-    DeviceValueObserved { id: u32, value: Option<f64> },
-    Remove(u32),
-}
-```
+- `GET /devices` - List all devices
+- `PUT /devices/{id}` - Create device
+- `POST /devices` - Update device value
+- `DELETE /devices/{id}` - Remove device
 
-Benefits:
-- Deterministic behavior
-- No race conditions
-- Easy debugging
-- Replayable events
+### MQTT Topics
 
----
+- `devices/{id}/created` - Device created
+- `devices/{id}/value` - Value updated
+- `devices/{id}/deleted` - Device removed
 
-## Development
+**Behavior:**
+
+- Default QoS: 0
+- No retained messages
+- Publishing errors are logged but do not block state progression
+- MQTT is treated as a side-effect listener, never a source of truth
+
+### Example Usage
 ```bash
-# Run tests
-cargo test
+# Create device
+curl -X PUT http://127.0.0.1:8080/devices/1
 
-# Linting
-cargo clippy
+# Update value
+curl -X POST http://127.0.0.1:8080/devices \
+  -H "Content-Type: application/json" \
+  -d '{"id":1,"value":42.5}'
 
-# Formatting
-cargo fmt
+# Subscribe to MQTT
+mosquitto_sub -h localhost -t "devices/#" -v
 ```
 
----
+## Key Design Decisions
 
-## Roadmap
+### Single-Writer Event Loop
 
-**Short-Term:**
-- Event handler separation
-- Unit/integration tests
+**Decision:** All state mutations flow through one event loop  
+**Reason:** Eliminates race conditions and non-deterministic behavior  
+**Tradeoff:** Lower parallelism for state mutations, but deterministic and debuggable
+
+### Adapter-Based Architecture
+
+**Decision:** Clear separation between domain logic and I/O  
+**Reason:** Clean boundaries, testable core  
+**Tradeoff:** More boilerplate, but better maintainability
+
+### Deterministic Simulation
+
+Simulation mode acts as a controlled data source for development and testing. It generates synthetic device values and feeds them into the same event pipeline as real Modbus data.
+
+- Uses the same GatewayEvent flow as Modbus
+- Intended for development, demos, and early testing
+- Currently non-deterministic (randomized values)
+- Deterministic seeding is planned for future CI integration tests
+
+## Explicit Non-Goals
+
+- Not a complete IoT platform product
+- Limited protocol support (focus on architecture)
+- No authentication or authorization system
+- No dependency on real hardware in MVP
+
+## Limitations
+
+- No persistent state
+- Limited protocol coverage
+- No horizontal scaling
+
+## Security Considerations
+
+- No authentication in MVP
+- No protocol-level encryption
+- Intended for trusted network environments
+
+## Performance
+
+- Event loop limits parallel state mutations
+- Suitable for edge-typical workloads
+- Designed for reliability over maximum throughput
+
+## Testing
+
+The project currently relies on manual testing via REST, MQTT subscriptions, and simulation mode.
+
+**Planned improvements:**
+
+- Unit tests for core state and dispatcher
+- Integration tests using simulation + local MQTT broker
+- Deterministic simulation for CI reproducibility
+
+## Deployment
+
+- Local execution via `cargo run`
+- Docker and docker-compose support planned but not yet implemented
+- systemd service example planned for Linux edge deployment
+
+## Extensibility
+
+New adapters or listeners can be added without modifying core logic. The event-driven architecture supports clean extension points.
+
+## Future Ideas
+
 - Persistent event log
+- Prometheus metrics endpoint
+- Digital twin registry
+- CI/CD pipeline
 
-**Mid-Term:**
-- OPC UA client
-- Metrics endpoint (Prometheus)
-- Docker container
+## Glossary
 
-**Long-Term:**
-- WebSocket streaming
-- Plugin architecture
-- Web dashboard
-
----
-
-## Why Rust?
-
-- Memory safety without GC
-- Zero-cost abstractions
-- Fearless concurrency
-- Modern tooling
-
-Perfect for reliable industrial systems.
-
----
+- **GatewayEvent** - Internal events for state changes
+- **Single-Writer** - Pattern with exactly one location for state mutations
+- **Adapter** - Module for connecting external systems
 
 ## License
 
 MIT License
 
----
-
-**Part of a [learning journey](../README.md) - production architecture, educational purpose.**
+**Built with Rust** - Production architecture, reliability-focused design.
