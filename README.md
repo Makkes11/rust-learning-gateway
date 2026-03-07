@@ -1,6 +1,6 @@
 # Rust Learning Gateway
 
-Learning Rust by building a production-grade Industrial IoT gateway.
+A structured learning journey through Rust, from fundamentals to building a production-oriented Industrial IoT system.
 
 ## Repository Structure
 ```
@@ -12,41 +12,40 @@ rust-learning-gateway/
 │   └── ...
 │
 ├── gateway/           # Main project: Industrial IoT Gateway
-│   ├── src/
 │   └── README.md
 │
 └── README.md
 ```
 
-**→ [Gateway Documentation](gateway/README.md)**
+---
+
+## Learning Phases
+
+### Phase 1: Rust Fundamentals (Days 1-29)
+
+Daily exercises focused on core Rust concepts:
+
+- **Ownership & Borrowing** - Memory management and the borrow checker
+- **Lifetimes** - Explicit lifetime annotations
+- **Enums & Pattern Matching** - Type-safe data modeling
+- **Error Handling** - `Result<T, E>` and `Option<T>` patterns
+- **Traits** - Polymorphism and code reuse
+- **Testing** - Unit and integration tests
+- **State Machines** - Type-state pattern implementation
+
+Each day is a self-contained exercise exploring a specific concept.
+
+### Phase 2: Industrial IoT Gateway (Day 30+)
+
+Transition from exercises to building a cohesive, production-oriented system. The gateway demonstrates real-world architecture patterns: event-driven design, protocol integration, reliability considerations, and clean separation of concerns.
+
+**→ See [gateway/README.md](gateway/README.md) for full project documentation**
 
 ---
 
-## Learning Path
+## Project Motivation
 
-### Phase 1: Fundamentals (Days 1-29)
-
-Focused exercises on core Rust concepts:
-
-- Ownership, borrowing & lifetimes
-- Pattern matching & enums
-- Error handling (`Result`, `Option`)
-- Traits & generics
-- Testing & CLI tools
-- State machines
-- Complex data structures
-
-### Phase 2: Production System (Day 30+)
-
-Industrial IoT gateway with production-grade architecture:
-
-- Event-driven design (single-writer pattern)
-- REST API (Axum)
-- Async runtime (Tokio)
-- MQTT integration
-- Modbus TCP client
-- Configuration system
-- Structured logging
+This repository documents learning Rust not through isolated tutorials, but by building a realistic system that addresses real industrial challenges. The focus is on understanding not just language features, but production-grade architecture, concurrency safety, and failure-mode thinking.
 
 ---
 
@@ -57,17 +56,14 @@ Industrial IoT gateway with production-grade architecture:
 - **Axum** (web framework)
 - **MQTT** (rumqttc)
 - **Modbus TCP** (tokio-modbus)
-- **Serde** (serialization)
 
 ---
 
-## Getting Started
+## Target Audience
 
-See [gateway/README.md](gateway/README.md) for:
-- Quick start guide
-- API documentation
-- Configuration options
-- Architecture details
+- Rust learners interested in backend or systems engineering
+- Industrial IoT / Edge engineers
+- Technical interviewers and recruiters
 
 ---
 
