@@ -12,24 +12,24 @@ mod logging;
 
 use crate::core::{
     events::GatewayEvent,
-    state::{AppState, GatewayState},
+    state::{AppState, GatewayState, StateListener},
 };
 use crate::{
     adapters::api::{create_device, delete_device, get_devices, update_device},
-    core::state::StateListener,
-};
-use crate::{adapters::mqtt::MqttPublisher, config::SourceMode};
-use crate::{
-    adapters::{modbus::ModbusPoller, simulation::SimulationPoller, spawn_service::spawn_service},
+    adapters::{
+        modbus::ModbusPoller, mqtt::MqttPublisher, simulation::SimulationPoller,
+        spawn_service::spawn_service,
+    },
+    config::{Config, SourceMode},
     core::bootstrap::initialize_devices,
+    core::dispatcher::Dispatcher,
 };
-use crate::{config::Config, core::dispatcher::Dispatcher};
 use tracing::{debug, error, info, warn};
 
 #[tokio::main]
 async fn main() {
     // -------------------------
-    // TRACING / LOGGING
+    // INITIALIZE TRACING / LOGGING
     // -------------------------
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -45,7 +45,7 @@ async fn main() {
         "Config loaded: server={}:{}, mqtt={}:{}, mode={:?}",
         config.api.host, config.api.port, config.mqtt.broker, config.mqtt.port, config.mode
     );
-    info!("Polling: {}ms", config.modbus.poll_interval_ms);
+    info!("Polling interval: {}ms", config.modbus.poll_interval_ms);
 
     // -------------------------
     // SHUTDOWN CHANNEL
@@ -59,7 +59,7 @@ async fn main() {
     let shared_state = Arc::new(Mutex::new(GatewayState::new()));
 
     // -------------------------
-    // LISTENERS
+    // LISTENERS SETUP
     // -------------------------
     let mut listeners: Vec<Arc<dyn StateListener>> = vec![Arc::new(logging::ConsoleLogger::new())];
 
@@ -89,7 +89,7 @@ async fn main() {
     initialize_devices(&tx, &config).await;
 
     // -------------------------
-    // POLLER TASK (MODBUS / SIMULATION)
+    // START DATA SOURCES (MODBUS / SIMULATION)
     // -------------------------
     info!("Starting gateway with mode: {:?}", config.mode);
     match config.mode {
@@ -137,14 +137,13 @@ async fn main() {
         }
     });
 
+    // -------------------------
+    // APP STATE FOR ROUTES
+    // -------------------------
     let app_state = AppState {
         tx: tx.clone(),
         state: shared_state.clone(),
     };
-
-    // -------------------------
-    // ROUTER
-    // -------------------------
     let app = Router::new()
         .route("/devices", post(update_device).get(get_devices))
         .route("/devices/{id}", put(create_device).delete(delete_device))
