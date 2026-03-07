@@ -57,7 +57,7 @@ pub async fn delete_device(
     info!("API: Deleting device id={}", id);
 
     app.tx
-        .send(GatewayEvent::Remove(id))
+        .send(GatewayEvent::DeviceRemoved { id: id })
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 

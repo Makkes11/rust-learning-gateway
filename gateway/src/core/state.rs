@@ -7,7 +7,7 @@ use tracing::info;
 pub enum GatewayEvent {
     DeviceValueObserved { id: u32, value: Option<f64> },
     DeviceCreated { id: u32 },
-    Remove(u32),
+    DeviceRemoved { id: u32 },
 }
 
 #[derive(Debug, Clone)]
@@ -62,7 +62,7 @@ impl GatewayState {
                 dev.value = value;
                 Ok(Some(StateChange::DeviceUpdated { id, value }))
             }
-            GatewayEvent::Remove(id) => {
+            GatewayEvent::DeviceRemoved { id } => {
                 let pos = self
                     .devices
                     .iter()
