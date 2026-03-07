@@ -14,7 +14,7 @@ impl ConsoleLogger {
 impl StateListener for ConsoleLogger {
     async fn on_event(&self, event: StateChange) -> Result<(), ListenerError> {
         match event {
-            StateChange::DeviceCreated { id } => {
+            StateChange::DeviceCreated { id, .. } => {
                 if id == 0 {
                     return Err(ListenerError::General(
                         "Device ID 0 is reserved/invalid".into(),
@@ -22,10 +22,17 @@ impl StateListener for ConsoleLogger {
                 }
                 info!("Device {id} was created");
             }
-            StateChange::DeviceUpdated { id, value } => {
+            StateChange::DeviceUpdated {
+                id,
+                value,
+                timestamp,
+            } => {
                 info!("Device {id} was updated with value {:?}", value);
+                info!("Update timestamp: {:?}", timestamp);
             }
-            StateChange::DeviceRemoved { id } => info!("Device {id} was removed"),
+            StateChange::DeviceRemoved { id, .. } => {
+                info!("Device {id} was removed");
+            }
         }
 
         Ok(())

@@ -5,9 +5,19 @@ use tracing::info;
 
 #[derive(Debug, Clone)]
 pub enum StateChange {
-    DeviceCreated { id: u32 },
-    DeviceUpdated { id: u32, value: Option<f64> },
-    DeviceRemoved { id: u32 },
+    DeviceCreated {
+        id: u32,
+        timestamp: chrono::DateTime<chrono::Utc>,
+    },
+    DeviceUpdated {
+        id: u32,
+        value: Option<f64>,
+        timestamp: chrono::DateTime<chrono::Utc>,
+    },
+    DeviceRemoved {
+        id: u32,
+        timestamp: chrono::DateTime<chrono::Utc>,
+    },
 }
 
 #[async_trait::async_trait]
@@ -45,7 +55,11 @@ impl GatewayState {
 
     pub fn apply_event(&mut self, ev: GatewayEvent) -> Result<Option<StateChange>, StateError> {
         match ev {
-            GatewayEvent::DeviceValueObserved { id, value } => {
+            GatewayEvent::DeviceValueObserved {
+                id,
+                value,
+                timestamp,
+            } => {
                 let dev = self
                     .devices
                     .iter_mut()
@@ -53,9 +67,14 @@ impl GatewayState {
                     .ok_or(StateError::DeviceNotFound(id))?;
 
                 dev.value = value;
-                Ok(Some(StateChange::DeviceUpdated { id, value }))
+                dev.timestamp = timestamp;
+                Ok(Some(StateChange::DeviceUpdated {
+                    id,
+                    value,
+                    timestamp,
+                }))
             }
-            GatewayEvent::DeviceRemoved { id } => {
+            GatewayEvent::DeviceRemoved { id, timestamp } => {
                 let pos = self
                     .devices
                     .iter()
@@ -63,18 +82,22 @@ impl GatewayState {
                     .ok_or(StateError::DeviceNotFound(id))?;
 
                 self.devices.remove(pos);
-                Ok(Some(StateChange::DeviceRemoved { id }))
+                Ok(Some(StateChange::DeviceRemoved { id, timestamp }))
             }
-            GatewayEvent::DeviceCreated { id } => {
+            GatewayEvent::DeviceCreated { id, timestamp } => {
                 let dev = self.devices.iter().find(|d| d.id == id);
 
                 if let Some(device) = dev {
                     info!("Device with id {} already exists", device.id);
                     return Ok(None);
                 } else {
-                    self.devices.push(Device { id, value: None });
+                    self.devices.push(Device {
+                        id,
+                        value: None,
+                        timestamp: timestamp,
+                    });
                     info!("Created Device with id {}", id);
-                    Ok(Some(StateChange::DeviceCreated { id }))
+                    Ok(Some(StateChange::DeviceCreated { id, timestamp }))
                 }
             }
         }

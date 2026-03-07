@@ -19,15 +19,20 @@ pub async fn create_device(
     Path(id): Path<u32>,
 ) -> Result<Json<Device>, StatusCode> {
     info!("API: Creating device id={}", id);
+    let timestamp = chrono::Utc::now();
 
     app.tx
-        .send(GatewayEvent::DeviceCreated { id: id })
+        .send(GatewayEvent::DeviceCreated {
+            id: id,
+            timestamp: timestamp,
+        })
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(Device {
         id: id,
         value: None,
+        timestamp: timestamp,
     }))
 }
 
@@ -37,10 +42,13 @@ pub async fn update_device(
 ) -> Result<Json<Device>, StatusCode> {
     info!("API: Updating device id={}", payload.id);
 
+    let timestamp = chrono::Utc::now();
+
     app.tx
         .send(GatewayEvent::DeviceValueObserved {
             id: payload.id,
             value: Some(payload.value),
+            timestamp: timestamp,
         })
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -48,6 +56,7 @@ pub async fn update_device(
     Ok(Json(Device {
         id: payload.id,
         value: Some(payload.value),
+        timestamp: timestamp,
     }))
 }
 
@@ -58,7 +67,10 @@ pub async fn delete_device(
     info!("API: Deleting device id={}", id);
 
     app.tx
-        .send(GatewayEvent::DeviceRemoved { id: id })
+        .send(GatewayEvent::DeviceRemoved {
+            id: id,
+            timestamp: chrono::Utc::now(),
+        })
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 

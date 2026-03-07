@@ -12,17 +12,24 @@ pub async fn initialize_devices(tx: &Sender<GatewayEvent>, config: &Config) {
                 let _ = tx
                     .send(GatewayEvent::DeviceCreated {
                         id: register.device_id,
+                        timestamp: chrono::Utc::now(),
                     })
                     .await;
             }
         }
         SourceMode::Simulation => {
             for device_id in 1..=2 {
-                let _ = tx.send(GatewayEvent::DeviceCreated { id: device_id }).await;
+                let _ = tx
+                    .send(GatewayEvent::DeviceCreated {
+                        id: device_id,
+                        timestamp: chrono::Utc::now(),
+                    })
+                    .await;
                 let _ = tx
                     .send(GatewayEvent::DeviceValueObserved {
                         id: device_id,
                         value: Some(rand::random::<f64>() * 100.0),
+                        timestamp: chrono::Utc::now(),
                     })
                     .await;
             }

@@ -27,7 +27,12 @@ impl MqttPublisher {
         Result::Ok(Self { client })
     }
 
-    pub async fn publish_device_update(&self, id: u32, value: f64) -> Result<(), ListenerError> {
+    pub async fn publish_device_update(
+        &self,
+        id: u32,
+        value: f64,
+        timestamp: chrono::DateTime<chrono::Utc>,
+    ) -> Result<(), ListenerError> {
         let topic = format!("devices/{}/value", id);
 
         debug!("Publishing to MQTT: topic={}, value={}", topic, value);
@@ -36,13 +41,17 @@ impl MqttPublisher {
         let payload = json!({
             "id": id,
             "value": value,
-            "timestamp": chrono::Utc::now().to_rfc3339()
+            "timestamp": timestamp
         });
 
         self.send_to_mqtt(topic, payload).await
     }
 
-    pub async fn delete_device(&self, id: u32) -> Result<(), ListenerError> {
+    pub async fn delete_device(
+        &self,
+        id: u32,
+        timestamp: chrono::DateTime<chrono::Utc>,
+    ) -> Result<(), ListenerError> {
         let topic = format!("devices/{}/deleted", id);
 
         debug!("Publishing to MQTT: topic={}, id={}", topic, id);
@@ -50,13 +59,17 @@ impl MqttPublisher {
         // timestamp is generated, not the state change timestamp
         let payload = json!({
             "id": id,
-            "timestamp": chrono::Utc::now().to_rfc3339()
+            "timestamp": timestamp.to_rfc3339()
         });
 
         self.send_to_mqtt(topic, payload).await
     }
 
-    pub async fn create_device(&self, id: u32) -> Result<(), ListenerError> {
+    pub async fn create_device(
+        &self,
+        id: u32,
+        timestamp: chrono::DateTime<chrono::Utc>,
+    ) -> Result<(), ListenerError> {
         let topic = format!("devices/{}/created", id);
 
         debug!("Publishing to MQTT: topic={}, id={}", topic, id);
@@ -64,7 +77,7 @@ impl MqttPublisher {
         // timestamp is generated, not the state change timestamp
         let payload = json!({
             "id": id,
-            "timestamp": chrono::Utc::now().to_rfc3339()
+            "timestamp": timestamp.to_rfc3339()
         });
 
         self.send_to_mqtt(topic, payload).await
@@ -94,17 +107,21 @@ impl MqttPublisher {
 impl StateListener for MqttPublisher {
     async fn on_event(&self, event: StateChange) -> Result<(), ListenerError> {
         match event {
-            StateChange::DeviceCreated { id } => self.create_device(id).await,
-            StateChange::DeviceUpdated { id, value } => {
+            StateChange::DeviceCreated { id, timestamp } => self.create_device(id, timestamp).await,
+            StateChange::DeviceUpdated {
+                id,
+                value,
+                timestamp,
+            } => {
                 // assumed value change, but not guaranteed
                 // listener should be idempotent to repeated updates
                 if let Some(val) = value {
-                    self.publish_device_update(id, val).await
+                    self.publish_device_update(id, val, timestamp).await
                 } else {
                     Ok(())
                 }
             }
-            StateChange::DeviceRemoved { id } => self.delete_device(id).await,
+            StateChange::DeviceRemoved { id, timestamp } => self.delete_device(id, timestamp).await,
         }
     }
 }

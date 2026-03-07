@@ -62,7 +62,10 @@ mod tests {
         ]);
 
         dispatcher
-            .dispatch(StateChange::DeviceCreated { id: 1 })
+            .dispatch(StateChange::DeviceCreated {
+                id: 1,
+                timestamp: chrono::Utc::now(),
+            })
             .await;
 
         assert_eq!(*calls.lock().unwrap(), 1);
