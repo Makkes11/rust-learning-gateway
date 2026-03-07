@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::Sender;
 use tracing::info;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum StateChange {
     DeviceCreated {
         id: u32,
