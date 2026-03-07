@@ -1,5 +1,5 @@
 use crate::config::SimulationConfig;
-use crate::core::{lifecycle::Lifecycle, state::GatewayEvent};
+use crate::core::{events::GatewayEvent, lifecycle::Lifecycle};
 use async_trait::async_trait;
 use tokio::{
     select,

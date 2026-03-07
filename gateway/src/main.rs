@@ -10,7 +10,10 @@ mod config;
 mod core;
 mod logging;
 
-use crate::core::state::{AppState, GatewayEvent, GatewayState};
+use crate::core::{
+    events::GatewayEvent,
+    state::{AppState, GatewayState},
+};
 use crate::{
     adapters::api::{create_device, delete_device, get_devices, update_device},
     core::state::StateListener,

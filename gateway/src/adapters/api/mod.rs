@@ -1,5 +1,6 @@
 use crate::core::device::{Device, DeviceInput};
-use crate::core::state::{AppState, GatewayEvent};
+use crate::core::events::GatewayEvent;
+use crate::core::state::AppState;
 use axum::extract::Path;
 use axum::{Json, extract::State, http::StatusCode};
 use tracing::info;

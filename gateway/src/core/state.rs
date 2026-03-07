@@ -1,14 +1,7 @@
-use crate::core::device::Device;
+use crate::core::{device::Device, events::GatewayEvent};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::Sender;
 use tracing::info;
-
-#[derive(Debug)]
-pub enum GatewayEvent {
-    DeviceValueObserved { id: u32, value: Option<f64> },
-    DeviceCreated { id: u32 },
-    DeviceRemoved { id: u32 },
-}
 
 #[derive(Debug, Clone)]
 pub enum StateChange {

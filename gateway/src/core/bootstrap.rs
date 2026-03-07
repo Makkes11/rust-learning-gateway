@@ -2,7 +2,7 @@ use tokio::sync::mpsc::Sender;
 
 use crate::{
     config::{Config, SourceMode},
-    core::state::GatewayEvent,
+    core::events::GatewayEvent,
 };
 
 pub async fn initialize_devices(tx: &Sender<GatewayEvent>, config: &Config) {
