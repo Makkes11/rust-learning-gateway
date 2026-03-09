@@ -12,22 +12,31 @@ pub async fn get_devices(State(app): State<AppState>) -> Json<Vec<Device>> {
 
 pub async fn create_device(
     State(app): State<AppState>,
-    Path(id): Path<u32>,
+    Json(payload): Json<DeviceInput>,
 ) -> Result<Json<Device>, StatusCode> {
-    info!("API: Creating device id={}", id);
+    info!("API: Creating device id={}", payload.id);
     let timestamp = chrono::Utc::now();
 
     app.tx
         .send(GatewayEvent::DeviceCreated {
-            id: id,
+            id: payload.id,
+            timestamp: timestamp,
+        })
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    app.tx
+        .send(GatewayEvent::DeviceValueObserved {
+            id: payload.id,
+            value: Some(payload.value),
             timestamp: timestamp,
         })
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(Device {
-        id: id,
-        value: None,
+        id: payload.id,
+        value: Some(payload.value),
         timestamp: timestamp,
     }))
 }

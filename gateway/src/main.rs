@@ -139,8 +139,8 @@ async fn main() {
         state: shared_state.clone(),
     };
     let app = Router::new()
-        .route("/devices", post(update_device).get(get_devices))
-        .route("/devices/{id}", put(create_device).delete(delete_device))
+        .route("/devices", post(create_device).get(get_devices))
+        .route("/devices/{id}", put(update_device).delete(delete_device))
         .with_state(app_state);
 
     let addr = format!("{}:{}", config.api.host, config.api.port);
