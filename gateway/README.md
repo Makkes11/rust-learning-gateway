@@ -81,7 +81,7 @@ client_id = "rust-gateway"
 
 [modbus]
 host = "127.0.0.1"
-port = 502
+port = 5020
 slave_id = 1
 poll_interval_ms = 1000
 
@@ -128,8 +128,8 @@ src/
 ### REST Endpoints
 
 - `GET /devices` - List all devices
-- `PUT /devices/{id}` - Create device
-- `POST /devices` - Update device value
+- `POST /devices` - Create device with value
+- `PUT /devices/{id}` - Update device value
 - `DELETE /devices/{id}` - Remove device
 
 ### MQTT Topics
@@ -147,13 +147,21 @@ src/
 
 ### Example Usage
 ```bash
-# Create device
-curl -X PUT http://127.0.0.1:8080/devices/1
-
-# Update value
+# Create device with value
 curl -X POST http://127.0.0.1:8080/devices \
   -H "Content-Type: application/json" \
+  -d '{"id":1,"value":12.34}'
+
+# Get all devices
+curl http://127.0.0.1:8080/devices
+
+# Update device value
+curl -X PUT http://127.0.0.1:8080/devices/1 \
+  -H "Content-Type: application/json" \
   -d '{"id":1,"value":42.5}'
+
+# Delete device
+curl -X DELETE http://127.0.0.1:8080/devices/1
 
 # Subscribe to MQTT
 mosquitto_sub -h localhost -t "devices/#" -v
@@ -209,12 +217,33 @@ Simulation mode acts as a controlled data source for development and testing. It
 
 ## Testing
 
-The project currently relies on manual testing via REST, MQTT subscriptions, and simulation mode.
+The project includes both unit tests in the source code and integration tests for API endpoints.
+
+**Running tests:**
+```bash
+cargo test
+```
+
+**Test coverage:**
+- `src/core/state_tests.rs` - Unit tests for event application and state mutations
+- `src/core/dispatcher_tests.rs` - Dispatcher event processing tests
+- `tests/api_endpoints.rs` - Integration tests for REST API (create, read, update, delete)
+
+**Current test results:**
+- Core state management: 5 tests
+- API endpoint integration: 4 test scenarios (create, read, update, delete)
+
+**Example test scenario:**
+The `api_endpoints_work` test validates the complete lifecycle:
+1. Create a device via `POST /devices` with value
+2. Retrieve device via `GET /devices` and verify value
+3. Update device via `PUT /devices/{id}` with new value
+4. Delete device via `DELETE /devices/{id}` and verify removal
 
 **Planned improvements:**
-
-- Unit tests for core state and dispatcher
-- Integration tests using simulation + local MQTT broker
+- Performance testing under sustained load
+- Chaos testing for network failures
+- MQTT listener integration tests
 - Deterministic simulation for CI reproducibility
 
 ## Deployment
