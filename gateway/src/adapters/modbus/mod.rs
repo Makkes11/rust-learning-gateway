@@ -2,10 +2,12 @@ use crate::config::ModbusConfig;
 use crate::core::{events::GatewayEvent, lifecycle::Lifecycle};
 use anyhow::Result;
 use async_trait::async_trait;
+use std::net::SocketAddr;
+use tokio::net::lookup_host;
 use tokio::{
     select,
     sync::{broadcast, mpsc::Sender},
-    time::{Duration, sleep},
+    time::{sleep, Duration},
 };
 use tokio_modbus::client::tcp;
 use tokio_modbus::prelude::*;
@@ -60,11 +62,18 @@ impl ModbusPoller {
         Ok(())
     }
 
-    async fn run_polling_loop(&self, shutdown: &mut broadcast::Receiver<()>) -> Result<()> {
-        let socket_addr = format!("{}:{}", self.config.host, self.config.port);
+    async fn run_polling_loop(
+        &self,
+        shutdown: &mut broadcast::Receiver<()>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let addr = format!("{}:{}", self.config.host, self.config.port);
+        let mut addrs = lookup_host(addr).await?;
+        let socket_addr: SocketAddr = addrs.next().ok_or_else(|| "No address found".to_string())?;
+
         info!("Connecting to Modbus device at {}", socket_addr);
 
-        let mut ctx = tcp::connect_slave(socket_addr.parse()?, Slave(self.config.slave_id)).await?;
+        let mut ctx = tcp::connect_slave(socket_addr, Slave(self.config.slave_id)).await?;
+
         info!("Modbus connected");
 
         loop {

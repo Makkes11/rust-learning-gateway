@@ -17,10 +17,11 @@ This gateway connects industrial devices through a deterministic, event-driven a
 ## Features
 
 - Event-driven architecture with single-writer state pattern
-- Modbus TCP polling
-- MQTT publishing
+- Modbus TCP polling with DNS resolution support
+- MQTT publishing with simplified payload handling
 - REST API for device management
 - Deterministic simulation mode
+- Docker containerization with multi-service setup
 - Graceful shutdown handling
 - Structured logging
 - Configuration-driven operation
@@ -64,6 +65,29 @@ cargo run
 
 Server starts on `http://127.0.0.1:8080`
 
+### Docker Setup
+
+For containerized deployment with integrated MQTT broker and Modbus simulator:
+
+```bash
+# Build and run with docker-compose
+docker-compose up --build
+
+# Or build image manually
+docker build -t rust-gateway .
+docker run -p 8080:8080 rust-gateway
+```
+
+**Services included:**
+- **Gateway**: Main application on port 8080
+- **MQTT Broker** (Eclipse Mosquitto): Port 1883
+- **Modbus Simulator**: Port 5020
+
+**Access:**
+- API: `http://localhost:8080`
+- MQTT: `localhost:1883`
+- Modbus: `localhost:5020`
+
 ## Configuration
 
 Edit `config.toml`:
@@ -71,16 +95,16 @@ Edit `config.toml`:
 mode = "Modbus" # or "Simulation"
 
 [api]
-host = "127.0.0.1"
+host = "0.0.0.0"  # Use 0.0.0.0 for containerized deployments
 port = 8080
 
 [mqtt]
-broker = "localhost"
+broker = "mqtt"  # Use "mqtt" for docker-compose, "localhost" for local
 port = 1883
 client_id = "rust-gateway"
 
 [modbus]
-host = "127.0.0.1"
+host = "modbus-sim"  # Use "modbus-sim" for docker-compose, "127.0.0.1" for local
 port = 5020
 slave_id = 1
 poll_interval_ms = 1000
@@ -248,8 +272,9 @@ The `api_endpoints_work` test validates the complete lifecycle:
 
 ## Deployment
 
-- Local execution via `cargo run`or `RUST_LOG=debug cargo run`
-- Docker and docker-compose support planned but not yet implemented
+- **Local execution:** `cargo run` or `RUST_LOG=debug cargo run`
+- **Docker container:** `docker build -t rust-gateway . && docker run -p 8080:8080 rust-gateway`
+- **Full stack with docker-compose:** `docker-compose up --build` (includes MQTT broker and Modbus simulator)
 - systemd service example planned for Linux edge deployment
 
 ## Extensibility

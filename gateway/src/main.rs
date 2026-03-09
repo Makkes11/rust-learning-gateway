@@ -1,6 +1,6 @@
 use axum::{
-    Router,
     routing::{post, put},
+    Router,
 };
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::Mutex};
@@ -27,7 +27,7 @@ use crate::{
 use tracing::{debug, error, info, warn};
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // -------------------------
     // INITIALIZE TRACING / LOGGING
     // -------------------------
@@ -170,4 +170,5 @@ async fn main() {
         .unwrap();
 
     info!("Gateway stopped completely");
+    Ok(())
 }
