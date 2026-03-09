@@ -1,4 +1,3 @@
-// gateway/src/core/state_tests.rs
 #[cfg(test)]
 mod tests {
 

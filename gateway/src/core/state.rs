@@ -1,6 +1,6 @@
 use crate::core::{device::Device, events::GatewayEvent};
-use std::sync::{Arc, Mutex};
-use tokio::sync::mpsc::Sender;
+use std::sync::Arc;
+use tokio::sync::{Mutex, mpsc::Sender};
 use tracing::info;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -43,7 +43,7 @@ impl fmt::Display for StateError {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct GatewayState {
     pub devices: Vec<Device>,
 }

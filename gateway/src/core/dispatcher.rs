@@ -1,6 +1,7 @@
 use crate::core::state::{StateChange, StateListener};
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct Dispatcher {
     listeners: Vec<Arc<dyn StateListener>>,
 }
@@ -26,8 +27,9 @@ mod tests {
 
     use super::*;
     use crate::core::state::{ListenerError, StateChange, StateListener};
+    use tokio::sync::Mutex;
 
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
 
     struct OkListener {
         calls: Arc<Mutex<u32>>,
@@ -36,7 +38,7 @@ mod tests {
     #[async_trait::async_trait]
     impl StateListener for OkListener {
         async fn on_event(&self, _: StateChange) -> Result<(), ListenerError> {
-            *self.calls.lock().unwrap() += 1;
+            *self.calls.lock().await += 1;
             Ok(())
         }
     }
@@ -68,6 +70,6 @@ mod tests {
             })
             .await;
 
-        assert_eq!(*calls.lock().unwrap(), 1);
+        assert_eq!(*calls.lock().await, 1);
     }
 }

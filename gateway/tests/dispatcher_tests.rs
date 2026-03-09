@@ -1,10 +1,14 @@
 #[cfg(test)]
 mod tests {
-    use crate::core::dispatcher::Dispatcher;
-    use crate::core::events::GatewayEvent;
-    use crate::core::state::{GatewayState, ListenerError, StateChange, StateListener};
     use chrono::Utc;
-    use std::sync::{Arc, Mutex};
+    use gateway::core::state::GatewayState;
+    use gateway::core::{
+        dispatcher::Dispatcher,
+        events::GatewayEvent,
+        state::{ListenerError, StateChange, StateListener},
+    };
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
 
     struct MockListener {
         events: Arc<Mutex<Vec<StateChange>>>,
@@ -13,7 +17,7 @@ mod tests {
     #[async_trait::async_trait]
     impl StateListener for MockListener {
         async fn on_event(&self, event: StateChange) -> Result<(), ListenerError> {
-            self.events.lock().unwrap().push(event);
+            self.events.lock().await.push(event);
             Ok(())
         }
     }
@@ -44,7 +48,7 @@ mod tests {
 
         dispatcher.dispatch(change).await;
 
-        let events = recorded.lock().unwrap();
+        let events = recorded.lock().await;
 
         assert_eq!(events.len(), 1);
     }

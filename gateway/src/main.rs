@@ -2,8 +2,8 @@ use axum::{
     Router,
     routing::{post, put},
 };
-use std::sync::{Arc, Mutex};
-use tokio::net::TcpListener;
+use std::sync::Arc;
+use tokio::{net::TcpListener, sync::Mutex};
 
 mod adapters;
 mod config;
@@ -114,13 +114,7 @@ async fn main() {
             debug!("Event loop: received {:?}", event);
 
             let state_change = {
-                let mut state = match event_state.lock() {
-                    Ok(s) => s,
-                    Err(_) => {
-                        error!("Mutex poisoned in event loop");
-                        return;
-                    }
-                };
+                let mut state = event_state.lock().await;
 
                 match state.apply_event(event) {
                     Ok(sc) => sc,

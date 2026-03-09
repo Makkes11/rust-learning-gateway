@@ -5,13 +5,9 @@ use axum::extract::Path;
 use axum::{Json, extract::State, http::StatusCode};
 use tracing::info;
 
-pub async fn get_devices(State(app): State<AppState>) -> Result<Json<Vec<Device>>, StatusCode> {
-    let state = app
-        .state
-        .lock()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(Json(state.devices.clone()))
+pub async fn get_devices(State(app): State<AppState>) -> Json<Vec<Device>> {
+    let state = app.state.lock().await;
+    Json(state.devices.clone())
 }
 
 pub async fn create_device(
