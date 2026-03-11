@@ -12,7 +12,7 @@ pub async fn initialize_devices(tx: &Sender<GatewayEvent>, config: &Config) {
                 let _ = tx
                     .send(GatewayEvent::DeviceCreated {
                         id: register.device_id,
-                        timestamp: chrono::Utc::now(),
+                        timestamp: chrono::Utc::now().timestamp_millis(),
                     })
                     .await;
             }
@@ -22,14 +22,14 @@ pub async fn initialize_devices(tx: &Sender<GatewayEvent>, config: &Config) {
                 let _ = tx
                     .send(GatewayEvent::DeviceCreated {
                         id: device_id,
-                        timestamp: chrono::Utc::now(),
+                        timestamp: chrono::Utc::now().timestamp_millis(),
                     })
                     .await;
                 let _ = tx
                     .send(GatewayEvent::DeviceValueObserved {
                         id: device_id,
                         value: Some(rand::random::<f64>() * 100.0),
-                        timestamp: chrono::Utc::now(),
+                        timestamp: chrono::Utc::now().timestamp_millis(),
                     })
                     .await;
             }

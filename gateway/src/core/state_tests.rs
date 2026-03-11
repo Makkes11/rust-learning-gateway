@@ -8,7 +8,7 @@ mod tests {
     #[tokio::test]
     async fn test_device_created_applies_timestamp() {
         let mut state = GatewayState::new();
-        let ts = Utc::now();
+        let ts = Utc::now().timestamp_millis();
 
         let event = GatewayEvent::DeviceCreated {
             id: 1,
@@ -31,7 +31,7 @@ mod tests {
     #[tokio::test]
     async fn test_device_value_observed_applies_timestamp() {
         let mut state = GatewayState::new();
-        let ts_created = Utc::now();
+        let ts_created = Utc::now().timestamp_millis();
         state
             .apply_event(GatewayEvent::DeviceCreated {
                 id: 1,
@@ -39,7 +39,7 @@ mod tests {
             })
             .unwrap();
 
-        let ts_update = Utc::now();
+        let ts_update = Utc::now().timestamp_millis();
         let event = GatewayEvent::DeviceValueObserved {
             id: 1,
             value: Some(42.0),
@@ -62,7 +62,7 @@ mod tests {
     #[tokio::test]
     async fn test_device_removed_applies_timestamp() {
         let mut state = GatewayState::new();
-        let ts_created = Utc::now();
+        let ts_created = Utc::now().timestamp_millis();
         state
             .apply_event(GatewayEvent::DeviceCreated {
                 id: 1,
@@ -70,7 +70,7 @@ mod tests {
             })
             .unwrap();
 
-        let ts_removed = Utc::now();
+        let ts_removed = Utc::now().timestamp_millis();
         let event = GatewayEvent::DeviceRemoved {
             id: 1,
             timestamp: ts_removed,
@@ -90,7 +90,7 @@ mod tests {
     #[tokio::test]
     async fn test_device_not_found_error() {
         let mut state = GatewayState::new();
-        let ts = Utc::now();
+        let ts = Utc::now().timestamp_millis();
 
         let event = GatewayEvent::DeviceValueObserved {
             id: 999,

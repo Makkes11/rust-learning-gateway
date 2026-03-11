@@ -3,14 +3,14 @@ pub enum GatewayEvent {
     DeviceValueObserved {
         id: u32,
         value: Option<f64>,
-        timestamp: chrono::DateTime<chrono::Utc>,
+        timestamp: i64,
     },
     DeviceCreated {
         id: u32,
-        timestamp: chrono::DateTime<chrono::Utc>,
+        timestamp: i64,
     },
     DeviceRemoved {
         id: u32,
-        timestamp: chrono::DateTime<chrono::Utc>,
+        timestamp: i64,
     },
 }

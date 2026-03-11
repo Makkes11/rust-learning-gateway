@@ -1,22 +1,22 @@
 use crate::core::{device::Device, events::GatewayEvent};
 use std::sync::Arc;
-use tokio::sync::{Mutex, mpsc::Sender};
+use tokio::sync::{mpsc::Sender, Mutex};
 use tracing::info;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StateChange {
     DeviceCreated {
         id: u32,
-        timestamp: chrono::DateTime<chrono::Utc>,
+        timestamp: i64,
     },
     DeviceUpdated {
         id: u32,
         value: Option<f64>,
-        timestamp: chrono::DateTime<chrono::Utc>,
+        timestamp: i64,
     },
     DeviceRemoved {
         id: u32,
-        timestamp: chrono::DateTime<chrono::Utc>,
+        timestamp: i64,
     },
 }
 

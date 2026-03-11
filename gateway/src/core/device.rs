@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct Device {
     pub id: u32,
     pub value: Option<f64>,
-    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub timestamp: i64,
 }
 
 #[derive(Debug, Deserialize)]

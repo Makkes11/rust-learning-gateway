@@ -2,7 +2,7 @@ use crate::core::device::{Device, DeviceInput};
 use crate::core::events::GatewayEvent;
 use crate::core::state::AppState;
 use axum::extract::Path;
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{extract::State, http::StatusCode, Json};
 use tracing::info;
 
 pub async fn get_devices(State(app): State<AppState>) -> Json<Vec<Device>> {
@@ -15,20 +15,11 @@ pub async fn create_device(
     Json(payload): Json<DeviceInput>,
 ) -> Result<Json<Device>, StatusCode> {
     info!("API: Creating device id={}", payload.id);
-    let timestamp = chrono::Utc::now();
+    let timestamp = chrono::Utc::now().timestamp_millis();
 
     app.tx
         .send(GatewayEvent::DeviceCreated {
             id: payload.id,
-            timestamp: timestamp,
-        })
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    app.tx
-        .send(GatewayEvent::DeviceValueObserved {
-            id: payload.id,
-            value: Some(payload.value),
             timestamp: timestamp,
         })
         .await
@@ -47,7 +38,7 @@ pub async fn update_device(
 ) -> Result<Json<Device>, StatusCode> {
     info!("API: Updating device id={}", payload.id);
 
-    let timestamp = chrono::Utc::now();
+    let timestamp = chrono::Utc::now().timestamp_millis();
 
     app.tx
         .send(GatewayEvent::DeviceValueObserved {
@@ -74,7 +65,7 @@ pub async fn delete_device(
     app.tx
         .send(GatewayEvent::DeviceRemoved {
             id: id,
-            timestamp: chrono::Utc::now(),
+            timestamp: chrono::Utc::now().timestamp_millis(),
         })
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

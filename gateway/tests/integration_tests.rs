@@ -18,7 +18,7 @@ async fn event_flows_from_state_to_listener() {
     let dispatcher = Dispatcher::new(vec![listener]);
 
     let mut state = GatewayState::new();
-    let ts = Utc::now();
+    let ts = Utc::now().timestamp_millis();
     let event = GatewayEvent::DeviceCreated {
         id: 1,
         timestamp: ts,
@@ -47,7 +47,7 @@ async fn event_flows_through_event_loop() {
 
     let event = GatewayEvent::DeviceCreated {
         id: 42,
-        timestamp: Utc::now(),
+        timestamp: Utc::now().timestamp_millis(),
     };
 
     let mut s = state.lock().await;
@@ -73,7 +73,7 @@ async fn api_create_device_triggers_state_and_dispatcher() {
 
     // Device Created Event
     let device_id = 42;
-    let ts_created = Utc::now();
+    let ts_created = Utc::now().timestamp_millis();
     {
         let mut s = state.lock().await;
         let change = s
@@ -89,7 +89,7 @@ async fn api_create_device_triggers_state_and_dispatcher() {
 
     // Device Value Update Event
     let new_value = 123.45;
-    let ts_updated = Utc::now();
+    let ts_updated = Utc::now().timestamp_millis();
     {
         let mut s = state.lock().await;
         let change = s

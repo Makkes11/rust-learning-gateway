@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use tokio::{
     select,
     sync::{broadcast, mpsc::Sender},
-    time::{Duration, sleep},
+    time::{sleep, Duration},
 };
 use tracing::info;
 
@@ -34,7 +34,7 @@ impl Lifecycle for SimulationPoller {
                             let _ = tx.send(GatewayEvent::DeviceValueObserved {
                                 id: device_id,
                                 value: Some(rand::random::<f64>() * 100.0 + self.config.add_value as f64),
-                                timestamp: chrono::Utc::now(),
+                                timestamp: chrono::Utc::now().timestamp_millis(),
                             }).await;
                         }
                     }

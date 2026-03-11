@@ -34,7 +34,7 @@ mod tests {
 
         let mut state = GatewayState::new();
 
-        let ts = Utc::now();
+        let ts = Utc::now().timestamp_millis();
 
         let event = GatewayEvent::DeviceCreated {
             id: 1,
