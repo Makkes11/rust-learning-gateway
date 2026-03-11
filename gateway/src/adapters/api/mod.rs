@@ -27,7 +27,7 @@ pub async fn create_device(
 
     Ok(Json(Device {
         id: payload.id,
-        value: Some(payload.value),
+        value: payload.value,
         timestamp: timestamp,
     }))
 }
@@ -43,7 +43,7 @@ pub async fn update_device(
     app.tx
         .send(GatewayEvent::DeviceValueObserved {
             id: payload.id,
-            value: Some(payload.value),
+            value: payload.value,
             timestamp: timestamp,
         })
         .await
@@ -51,7 +51,7 @@ pub async fn update_device(
 
     Ok(Json(Device {
         id: payload.id,
-        value: Some(payload.value),
+        value: payload.value,
         timestamp: timestamp,
     }))
 }

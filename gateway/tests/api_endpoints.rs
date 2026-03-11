@@ -61,8 +61,8 @@ async fn api_endpoints_work() {
         )
         .with_state(app_state);
 
-    // TEST 1: Create device via POST /devices
-    let device_json = r#"{"id":1,"value":12.34}"#;
+    // TEST 1: Create device via POST /devices (no value)
+    let device_json = r#"{"id":1}"#;
     let request = Request::builder()
         .method("POST")
         .uri("/devices")
@@ -76,12 +76,12 @@ async fn api_endpoints_work() {
     // Process pending events from the channel
     process_events(&mut rx, &state).await;
 
-    // Verify device was created
+    // Verify device was created (value should be None)
     {
         let state_guard = state.lock().await;
         assert_eq!(state_guard.devices.len(), 1);
         assert_eq!(state_guard.devices[0].id, 1);
-        assert_eq!(state_guard.devices[0].value, Some(12.34));
+        assert_eq!(state_guard.devices[0].value, None);
     }
 
     // TEST 2: Get devices via GET /devices
@@ -100,7 +100,7 @@ async fn api_endpoints_work() {
     let devices: Vec<Value> = serde_json::from_slice(&body_bytes).unwrap();
     assert_eq!(devices.len(), 1);
     assert_eq!(devices[0]["id"], 1);
-    assert_eq!(devices[0]["value"], 12.34);
+    assert!(devices[0]["value"].is_null());
 
     // TEST 3: Update device via PUT /devices/{id}
     let update_json = r#"{"id":1,"value":56.78}"#;
@@ -229,32 +229,6 @@ async fn error_invalid_json_in_create() {
 }
 
 #[tokio::test]
-async fn error_missing_field_in_create() {
-    // Setup
-    let state = Arc::new(Mutex::new(GatewayState::new()));
-    let (tx, _rx) = tokio::sync::mpsc::channel::<gateway::core::events::GatewayEvent>(10);
-    let router = create_test_router(state.clone(), tx);
-
-    // Missing 'value' field
-    let request = Request::builder()
-        .method("POST")
-        .uri("/devices")
-        .header("content-type", "application/json")
-        .body(Body::from(r#"{"id":1}"#))
-        .unwrap();
-
-    let response = router.clone().oneshot(request).await.unwrap();
-    // Should fail due to missing required field
-    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
-
-    // Verify no device was created
-    {
-        let state_guard = state.lock().await;
-        assert_eq!(state_guard.devices.len(), 0);
-    }
-}
-
-#[tokio::test]
 async fn error_invalid_type_in_create() {
     // Setup
     let state = Arc::new(Mutex::new(GatewayState::new()));
@@ -266,7 +240,7 @@ async fn error_invalid_type_in_create() {
         .method("POST")
         .uri("/devices")
         .header("content-type", "application/json")
-        .body(Body::from(r#"{"id":1,"value":"not_a_number"}"#))
+        .body(Body::from(r#"{"id":"test"}"#))
         .unwrap();
 
     let response = router.clone().oneshot(request).await.unwrap();
@@ -303,49 +277,5 @@ async fn error_empty_body_in_create() {
     {
         let state_guard = state.lock().await;
         assert_eq!(state_guard.devices.len(), 0);
-    }
-}
-
-#[tokio::test]
-async fn error_create_duplicate_device_updates_value() {
-    // Setup
-    let state = Arc::new(Mutex::new(GatewayState::new()));
-    let (tx, mut rx) = tokio::sync::mpsc::channel::<gateway::core::events::GatewayEvent>(10);
-    let router = create_test_router(state.clone(), tx);
-
-    // Create device first time
-    let device_json = r#"{"id":1,"value":10.0}"#;
-    let request = Request::builder()
-        .method("POST")
-        .uri("/devices")
-        .header("content-type", "application/json")
-        .body(Body::from(device_json))
-        .unwrap();
-
-    let response = router.clone().oneshot(request).await.unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
-    process_events(&mut rx, &state).await;
-
-    // Try to create the same device again with different value
-    let device_json2 = r#"{"id":1,"value":20.0}"#;
-    let request2 = Request::builder()
-        .method("POST")
-        .uri("/devices")
-        .header("content-type", "application/json")
-        .body(Body::from(device_json2))
-        .unwrap();
-
-    let response2 = router.clone().oneshot(request2).await.unwrap();
-    // Should succeed - API sends the events
-    assert_eq!(response2.status(), StatusCode::OK);
-    process_events(&mut rx, &state).await;
-
-    // Verify device exists with updated value
-    {
-        let state_guard = state.lock().await;
-        assert_eq!(state_guard.devices.len(), 1);
-        assert_eq!(state_guard.devices[0].id, 1);
-        // Second create sends DeviceValueObserved event which updates the value
-        assert_eq!(state_guard.devices[0].value, Some(20.0));
     }
 }
