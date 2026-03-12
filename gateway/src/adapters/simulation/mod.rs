@@ -40,13 +40,13 @@ impl Lifecycle for SimulationPoller {
                     }
 
                     _ = tick_shutdown.recv() => {
-                        info!("Simulation task shutting down");
+                        info!("{}: Simulation task shutting down", self.config.device_name);
                         break;
                     }
                 }
             }
 
-            info!("Simulation task stopped");
+            info!("{}: Simulation task stopped", self.config.device_name);
         });
     }
 }

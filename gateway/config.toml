@@ -1,16 +1,20 @@
 mode = "Modbus" # Simulation | Modbus
+gateway_name = "Gateway-1"
 
 [api]
+device_name = "API-Server"
 host = "0.0.0.0"
 port = 8080
 
 [mqtt]
-broker = "mqtt"
+device_name = "Gateway-1"
+broker = "Mqtt"
 port = 1883
 client_id = "rust-gateway"
 
 [modbus]
 host = "modbus-sim"
+device_name = "Modbus-Client"
 port = 5020
 slave_id = 1
 poll_interval_ms = 1000
@@ -28,5 +32,6 @@ device_id = 200
 scale = 0.1
 
 [simulation]
+device_name = "Simulation-Client"
 interval_ms = 2000
 add_value = 1

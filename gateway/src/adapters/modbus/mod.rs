@@ -70,17 +70,23 @@ impl ModbusPoller {
         let mut addrs = lookup_host(addr).await?;
         let socket_addr: SocketAddr = addrs.next().ok_or_else(|| "No address found".to_string())?;
 
-        info!("Connecting to Modbus device at {}", socket_addr);
+        info!(
+            "{}: Connecting to Modbus device at {}",
+            self.config.device_name, socket_addr
+        );
 
         let mut ctx = tcp::connect_slave(socket_addr, Slave(self.config.slave_id)).await?;
 
-        info!("Modbus connected");
+        info!("{}: Modbus connected", self.config.device_name);
 
         loop {
             match self.poll_once(&mut ctx).await {
-                Ok(_) => debug!("Modbus poll successful"),
+                Ok(_) => debug!("{}: Modbus poll successful", self.config.device_name),
                 Err(e) => {
-                    error!("Modbus poll failed: {}, retrying...", e);
+                    error!(
+                        "{}: Modbus poll failed: {}, retrying...",
+                        self.config.device_name, e
+                    );
                     sleep(Duration::from_secs(1)).await;
                     continue;
                 }
@@ -89,7 +95,7 @@ impl ModbusPoller {
             select! {
                 _ = sleep(Duration::from_millis(self.config.poll_interval_ms)) => {},
                 _ = shutdown.recv() => {
-                    info!("Modbus received shutdown signal");
+                    info!("{}: Modbus received shutdown signal", self.config.device_name);
                     return Ok(());
                 }
             }
@@ -107,22 +113,31 @@ impl Lifecycle for ModbusPoller {
 
         loop {
             if shutdown.try_recv().is_ok() {
-                info!("Modbus shutting down before reconnect");
+                info!(
+                    "{}: Modbus shutting down before reconnect",
+                    self.config.device_name
+                );
                 break;
             }
 
             match self.run_polling_loop(&mut shutdown).await {
                 Ok(_) => {
-                    info!("Modbus connection closed gracefully");
+                    info!(
+                        "{}: Modbus connection closed gracefully",
+                        self.config.device_name
+                    );
                     break;
                 }
                 Err(e) => {
-                    error!("Modbus connection failed: {}", e);
-                    info!("Retrying in 5 seconds...");
+                    error!(
+                        "{}: Modbus connection failed: {}",
+                        self.config.device_name, e
+                    );
+                    info!("{}: Retrying in 5 seconds...", self.config.device_name);
                     select! {
                         _ = sleep(Duration::from_secs(5)) => {},
                         _ = shutdown.recv() => {
-                            info!("Shutdown during reconnect wait");
+                            info!("{}: Shutdown during reconnect wait", self.config.device_name);
                             break;
                         }
                     }

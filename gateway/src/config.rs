@@ -1,19 +1,21 @@
 use std::error::Error;
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct ApiConfig {
+    pub device_name: String,
     pub host: String,
     pub port: u16,
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct MqttConfig {
+    pub device_name: String,
     pub broker: String,
     pub port: u16,
     pub client_id: String,
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct RegisterMapping {
     pub address: u16,
     pub count: u16,
@@ -21,8 +23,9 @@ pub struct RegisterMapping {
     pub scale: f64,
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct ModbusConfig {
+    pub device_name: String,
     pub host: String,
     pub port: u16,
     pub slave_id: u8,
@@ -30,20 +33,22 @@ pub struct ModbusConfig {
     pub registers: Vec<RegisterMapping>,
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct SimulationConfig {
+    pub device_name: String,
     pub interval_ms: u64,
     pub add_value: i32,
 }
 
-#[derive(Debug, serde::Deserialize, PartialEq, Clone)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone)]
 pub enum SourceMode {
     Simulation,
     Modbus,
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct Config {
+    pub gateway_name: String,
     pub mode: SourceMode,
     pub api: ApiConfig,
     pub mqtt: MqttConfig,
@@ -53,13 +58,13 @@ pub struct Config {
 
 impl Config {
     pub fn load() -> Result<Self, Box<dyn Error>> {
-        let contents = std::fs::read_to_string("config.toml")?;
+        let contents = std::fs::read_to_string("/config.toml")?;
         Ok(toml::from_str(&contents)?)
     }
 
     pub fn load_or_default() -> Self {
-        Config::load().unwrap_or_else(|_| {
-            eprintln!("⚠ config.toml not found, using defaults");
+        Config::load().unwrap_or_else(|e| {
+            eprintln!("⚠ config.toml not found, using defaults: {}", e);
             Config::default()
         })
     }
@@ -68,17 +73,21 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            gateway_name: "Rust Gateway".into(),
             mode: SourceMode::Simulation,
             api: ApiConfig {
+                device_name: "API".into(),
                 host: "127.0.0.1".into(),
                 port: 8080,
             },
             mqtt: MqttConfig {
+                device_name: "MQTT".into(),
                 broker: "localhost".into(),
                 port: 1883,
                 client_id: "rust-gateway".into(),
             },
             modbus: ModbusConfig {
+                device_name: "Modbus".into(),
                 host: "127.0.0.1".into(),
                 port: 5020,
                 slave_id: 1,
@@ -99,6 +108,7 @@ impl Default for Config {
                 ],
             },
             simulation: SimulationConfig {
+                device_name: "Simulation".into(),
                 interval_ms: 2000,
                 add_value: 1,
             },

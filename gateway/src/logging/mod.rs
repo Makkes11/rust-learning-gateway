@@ -2,11 +2,15 @@ use crate::core::state::{ListenerError, StateChange, StateListener};
 use async_trait::async_trait;
 use tracing::info;
 
-pub struct ConsoleLogger;
+pub struct ConsoleLogger {
+    gateway_name: String,
+}
 
 impl ConsoleLogger {
-    pub fn new() -> Self {
-        Self
+    pub fn new(gateway_name: &str) -> Self {
+        Self {
+            gateway_name: gateway_name.into(),
+        }
     }
 }
 
@@ -20,18 +24,20 @@ impl StateListener for ConsoleLogger {
                         "Device ID 0 is reserved/invalid".into(),
                     ));
                 }
-                info!("Device {id} was created");
+                info!("{}: Device {id} was created", self.gateway_name);
             }
             StateChange::DeviceUpdated {
                 id,
                 value,
                 timestamp,
             } => {
-                info!("Device {id} was updated with value {:?}", value);
-                info!("Update timestamp: {:?}", timestamp);
+                info!(
+                    "{}: Device {id} was updated with value {:?} at timestamp {}",
+                    self.gateway_name, value, timestamp
+                );
             }
             StateChange::DeviceRemoved { id, .. } => {
-                info!("Device {id} was removed");
+                info!("{}: Device {id} was removed", self.gateway_name);
             }
         }
 

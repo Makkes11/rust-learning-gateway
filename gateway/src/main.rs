@@ -41,11 +41,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // LOAD CONFIG
     // -------------------------
     let config = Config::load_or_default();
-    info!(
-        "Config loaded: server={}:{}, mqtt={}:{}, mode={:?}",
-        config.api.host, config.api.port, config.mqtt.broker, config.mqtt.port, config.mode
-    );
-    info!("Polling interval: {}ms", config.modbus.poll_interval_ms);
+    info!("Full config:\n{}", toml::to_string_pretty(&config).unwrap());
+    let gateway_name = config.gateway_name.clone();
 
     // -------------------------
     // SHUTDOWN CHANNEL
@@ -61,18 +58,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // -------------------------
     // LISTENERS SETUP
     // -------------------------
-    let mut listeners: Vec<Arc<dyn StateListener>> = vec![Arc::new(logging::ConsoleLogger::new())];
+    let mut listeners: Vec<Arc<dyn StateListener>> =
+        vec![Arc::new(logging::ConsoleLogger::new(&gateway_name))];
 
     let mqtt_service = match MqttPublisher::new(
-        &config.mqtt.broker,
-        config.mqtt.port,
-        &config.mqtt.client_id,
+        // &config.mqtt.broker,
+        // config.mqtt.port,
+        // &config.mqtt.client_id,
+        config.mqtt.clone(),
     )
     .await
     {
         Ok(p) => Some(Arc::new(p)),
         Err(err) => {
-            warn!("MQTT connection failed, running without MQTT: {}", err);
+            warn!(
+                "{}: {} - MQTT connection failed, running without MQTT: {}",
+                gateway_name, config.mqtt.device_name, err
+            );
             None
         }
     };
@@ -108,10 +110,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // -------------------------
     let event_state = shared_state.clone();
     let event_dispatcher = dispatcher.clone();
+    let gateway_name_loop = gateway_name.clone();
 
     tokio::spawn(async move {
         while let Some(event) = rx.recv().await {
-            debug!("Event loop: received {:?}", event);
+            debug!("{}: Event loop: received {:?}", gateway_name_loop, event);
 
             let state_change = {
                 let mut state = event_state.lock().await;
@@ -119,7 +122,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match state.apply_event(event) {
                     Ok(sc) => sc,
                     Err(e) => {
-                        error!("{}", e);
+                        error!("{}: {}", gateway_name_loop, e);
                         continue;
                     }
                 }
@@ -145,7 +148,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = format!("{}:{}", config.api.host, config.api.port);
     let listener = TcpListener::bind(&addr).await.unwrap();
-    info!("HTTP server listening on {}", addr);
+    info!(
+        "{}: {} - HTTP server listening on {}",
+        gateway_name, config.api.device_name, addr
+    );
 
     // -------------------------
     // GRACEFUL SHUTDOWN
