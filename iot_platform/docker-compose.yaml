@@ -1,11 +1,13 @@
 services:
   gateway:
-    build: .
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
     container_name: gateway
     ports:
-      - "8080:8080"   # expose API outside container
+      - "8080:8080"
     volumes:
-      - ./config.toml:/config.toml
+      - ./gateway/config.toml:/config.toml
     environment:
       - RUST_LOG=info
     depends_on:
@@ -18,7 +20,10 @@ services:
     image: oitc/modbus-server
     container_name: modbus-sim
     ports:
-      - "5020:5020"   # expose Modbus server outside container
+      - "5020:5020"
+    volumes:
+      - ./gateway/modbus.json:/modbus.json
+    command: ["-f", "/modbus.json"]
     restart: unless-stopped
 
   mqtt:
@@ -27,7 +32,7 @@ services:
     ports:
       - "1883:1883"
     volumes:
-      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./gateway/mosquitto.conf:/mosquitto/config/mosquitto.conf
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "1883"]
       interval: 5s

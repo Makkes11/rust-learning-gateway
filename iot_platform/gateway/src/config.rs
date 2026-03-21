@@ -48,6 +48,7 @@ pub enum SourceMode {
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct Config {
+    pub gateway_id: String,
     pub gateway_name: String,
     pub mode: SourceMode,
     pub api: ApiConfig,
@@ -73,6 +74,7 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            gateway_id: "1234-5678-9012".into(),
             gateway_name: "Rust Gateway".into(),
             mode: SourceMode::Simulation,
             api: ApiConfig {

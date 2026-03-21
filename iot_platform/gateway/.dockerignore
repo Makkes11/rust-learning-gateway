@@ -1,0 +1,7 @@
+# Ignore Rust build artifacts
+target
+*.rs.bk
+*.log
+
+# Ignore config backups
+*.toml.bak

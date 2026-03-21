@@ -62,10 +62,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         vec![Arc::new(logging::ConsoleLogger::new(&gateway_name))];
 
     let mqtt_service = match MqttPublisher::new(
-        // &config.mqtt.broker,
-        // config.mqtt.port,
-        // &config.mqtt.client_id,
         config.mqtt.clone(),
+        config.gateway_id.clone(),
+        config.gateway_name.clone(),
     )
     .await
     {

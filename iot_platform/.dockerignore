@@ -1,0 +1,20 @@
+# Ignore everything by default
+*
+
+# Allow workspace manifests
+!Cargo.toml
+!Cargo.lock
+
+# Allow only the crates we need
+!gateway/**
+!shared_models/**
+!telemetry/**
+
+# Ignore build artifacts
+**/target
+
+# Ignore config backups / logs / IDE folders
+*.rs.bk
+*.log
+.idea
+.vscode

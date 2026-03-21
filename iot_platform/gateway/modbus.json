@@ -1,0 +1,38 @@
+{
+  "server": {
+    "listenerAddress": "0.0.0.0",
+    "listenerPort": 5020,
+    "protocol": "TCP",
+    "tlsParams": {
+      "privateKey": null,
+      "certificate": null
+    },
+    "logging": {
+      "logLevel": "INFO",
+      "format": "%(asctime)-15s %(levelname)-8s %(message)s"
+    }
+  },
+  "persistence": {
+    "enabled": false
+  },
+  "metrics": {
+    "enabled": false
+  },
+  "registers": {
+    "initializeUndefinedRegisters": false,
+    "discreteInput": {},
+    "coils": {},
+    "holdingRegister": {
+        "0": 123,
+        "1": 456,
+        "2": 789,
+        "3": 321,
+        "4": 111,
+        "5": 222
+    },
+    "inputRegister": {
+      "0": 10,
+      "1": 20
+    }
+  }
+}

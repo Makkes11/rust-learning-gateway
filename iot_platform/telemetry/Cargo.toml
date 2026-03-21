@@ -1,0 +1,9 @@
+[package]
+name = "telemetry_service"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+shared_models = { path = "../shared_models" }
+rumqttc = "0.24"
+tokio = { version = "1", features = ["full"] }
