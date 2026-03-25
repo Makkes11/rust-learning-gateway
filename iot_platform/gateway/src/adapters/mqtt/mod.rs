@@ -14,6 +14,7 @@ use tracing::error;
 struct MqttMessage {
     topic: String,
     payload: Vec<u8>,
+    retain: bool,
 }
 
 pub struct MqttPublisher {
@@ -56,7 +57,12 @@ impl MqttPublisher {
         tokio::spawn(async move {
             while let Some(msg) = rx.recv().await {
                 if let Err(e) = client_clone
-                    .publish(msg.topic, rumqttc::QoS::AtLeastOnce, false, msg.payload)
+                    .publish(
+                        msg.topic,
+                        rumqttc::QoS::AtLeastOnce,
+                        msg.retain,
+                        msg.payload,
+                    )
                     .await
                 {
                     error!("{}: MQTT publish failed: {}", asset_name, e);
@@ -76,26 +82,21 @@ impl MqttPublisher {
 #[async_trait]
 impl StateListener for MqttPublisher {
     async fn on_event(&self, event: StateChange) -> Result<(), ListenerError> {
-        match event {
+        let (topic, payload_bytes, retain) = match event {
             StateChange::DeviceCreated { id, timestamp } => {
                 let topic = format!("{}/devices/{}/created", self.gateway_name, id);
-                let payload_model: DeviceCreatedPayload = DeviceCreatedPayload {
+                let payload = DeviceCreatedPayload {
                     ctx: DeviceContext {
                         gateway_id: self.gateway_id.clone(),
                         gateway_name: self.gateway_name.clone(),
                         device_name: self.config.device_name.clone(),
                         device_id: id,
                     },
-                    meta: Metadata {
-                        timestamp: timestamp,
-                    },
+                    meta: Metadata { timestamp },
                 };
-                let payload = serde_json::to_vec(&serde_json::json!(payload_model))
-                    .map_err(|e| ListenerError::Mqtt(e.to_string()))?;
-                self.sender
-                    .send(MqttMessage { topic, payload })
-                    .await
-                    .map_err(|e| ListenerError::Mqtt(e.to_string()))?;
+                let bytes =
+                    serde_json::to_vec(&payload).map_err(|e| ListenerError::Mqtt(e.to_string()))?;
+                (topic, bytes, true) // retain = true
             }
             StateChange::DeviceUpdated {
                 id,
@@ -103,8 +104,7 @@ impl StateListener for MqttPublisher {
                 timestamp,
             } => {
                 let topic = format!("{}/devices/{}/value", self.gateway_name, id);
-
-                let payload_model = DeviceValueObservedPayload {
+                let payload = DeviceValueObservedPayload {
                     ctx: DeviceContext {
                         gateway_id: self.gateway_id.clone(),
                         gateway_name: self.gateway_name.clone(),
@@ -114,34 +114,36 @@ impl StateListener for MqttPublisher {
                     value,
                     meta: Metadata { timestamp },
                 };
-                let payload = serde_json::to_vec(&serde_json::json!(payload_model))
-                    .map_err(|e| ListenerError::Mqtt(e.to_string()))?;
-                self.sender
-                    .send(MqttMessage { topic, payload })
-                    .await
-                    .map_err(|e| ListenerError::Mqtt(e.to_string()))?;
+                let bytes =
+                    serde_json::to_vec(&payload).map_err(|e| ListenerError::Mqtt(e.to_string()))?;
+                (topic, bytes, false) // retain = false
             }
             StateChange::DeviceRemoved { id, timestamp } => {
                 let topic = format!("{}/devices/{}/removed", self.gateway_name, id);
-                let payload_model: DeviceRemovedPayload = DeviceRemovedPayload {
+                let payload = DeviceRemovedPayload {
                     ctx: DeviceContext {
                         gateway_id: self.gateway_id.clone(),
                         gateway_name: self.gateway_name.clone(),
                         device_name: self.config.device_name.clone(),
                         device_id: id,
                     },
-                    meta: Metadata {
-                        timestamp: timestamp,
-                    },
+                    meta: Metadata { timestamp },
                 };
-                let payload = serde_json::to_vec(&serde_json::json!(payload_model))
-                    .map_err(|e| ListenerError::Mqtt(e.to_string()))?;
-                self.sender
-                    .send(MqttMessage { topic, payload })
-                    .await
-                    .map_err(|e| ListenerError::Mqtt(e.to_string()))?;
+                let bytes =
+                    serde_json::to_vec(&payload).map_err(|e| ListenerError::Mqtt(e.to_string()))?;
+                (topic, bytes, true) // retain = true
             }
-        }
+        };
+
+        self.sender
+            .send(MqttMessage {
+                topic,
+                payload: payload_bytes,
+                retain,
+            })
+            .await
+            .map_err(|e| ListenerError::Mqtt(e.to_string()))?;
+
         Ok(())
     }
 }
