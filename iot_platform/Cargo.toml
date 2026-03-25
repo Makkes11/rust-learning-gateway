@@ -2,5 +2,6 @@
 resolver = "2"
 members = [
     "gateway",
-    "shared_models"
+    "shared_models",
+    "telemetry"
 ]
