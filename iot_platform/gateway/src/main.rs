@@ -15,7 +15,7 @@ use crate::core::{
     state::{AppState, GatewayState, StateListener},
 };
 use crate::{
-    adapters::api::{create_device, delete_device, get_devices, update_device},
+    adapters::api::{create_device, delete_device, get_devices, health_check, update_device},
     adapters::{
         modbus::ModbusPoller, mqtt::MqttPublisher, simulation::SimulationPoller,
         spawn_service::spawn_service,
@@ -143,6 +143,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/devices", post(create_device).get(get_devices))
         .route("/devices/{id}", put(update_device).delete(delete_device))
+        .route("/health", axum::routing::get(health_check))
         .with_state(app_state);
 
     let addr = format!("{}:{}", config.api.host, config.api.port);

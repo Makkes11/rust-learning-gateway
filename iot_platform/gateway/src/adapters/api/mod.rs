@@ -72,3 +72,7 @@ pub async fn delete_device(
 
     Ok(StatusCode::NO_CONTENT)
 }
+
+pub async fn health_check() -> &'static str {
+    "OK"
+}

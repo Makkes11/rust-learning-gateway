@@ -15,6 +15,30 @@ services:
         condition: service_healthy
       modbus-sim:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  telemetry:
+    build:
+      context: .
+      dockerfile: telemetry/Dockerfile
+    container_name: telemetry
+    environment:
+      - RUST_LOG=debug
+      - MQTT_Host=Mqtt
+      - MQTT_Port=1883
+      - DATABASE_URL=postgres://telemetry_user:telemetry_pass@postgres:5432/telemetry_db
+    depends_on:
+      gateway:
+        condition: service_healthy
+      mqtt:
+        condition: service_healthy
+      modbus-sim:
+        condition: service_started
 
   modbus-sim:
     image: oitc/modbus-server
@@ -39,3 +63,20 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: telemetry-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: telemetry_user
+      POSTGRES_PASSWORD: telemetry_pass
+      POSTGRES_DB: telemetry_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./telemetry/db/init:/docker-entrypoint-initdb.d/
+
+volumes:
+  postgres_data:
