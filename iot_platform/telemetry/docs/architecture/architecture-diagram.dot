@@ -1,0 +1,50 @@
+digraph IoTTelemetryArchitecture {
+    rankdir=LR;
+    node [shape=box, style=rounded, fontname="Arial"];
+
+    // Layers
+    Ingestion [label="Ingestion\n(MQTT / REST)"];
+    Processor [label="Processing\n(Domain Rules / Intents)"];
+    Storage [label="Storage Adapter\n(SQL, No Business Logic)"];
+
+    // Event types
+    DeviceCreated [label="DeviceCreated Event", shape=ellipse, style=filled, fillcolor=lightblue];
+    DeviceValueObserved [label="DeviceValueObserved Event", shape=ellipse, style=filled, fillcolor=lightblue];
+    DeviceRemoved [label="DeviceRemoved Event", shape=ellipse, style=filled, fillcolor=lightblue];
+
+    // Intents
+    EnsureDeviceExists [label="EnsureDeviceExists", shape=diamond, style=filled, fillcolor=lightyellow];
+    UpsertDeviceMetadata [label="UpsertDeviceMetadata", shape=diamond, style=filled, fillcolor=lightyellow];
+    RecordMeasurement [label="RecordMeasurement", shape=diamond, style=filled, fillcolor=lightyellow];
+    MarkDeviceRemoved [label="MarkDeviceRemoved", shape=diamond, style=filled, fillcolor=lightyellow];
+    ReactivateDevice [label="ReactivateDevice", shape=diamond, style=filled, fillcolor=lightyellow];
+
+    // Device state
+    implicit [label="implicit", shape=oval, style=filled, fillcolor=lightgray];
+    active [label="active", shape=oval, style=filled, fillcolor=lightgreen];
+    removed [label="removed", shape=oval, style=filled, fillcolor=salmon];
+
+    // Connections: Events → Processor
+    DeviceCreated -> Processor;
+    DeviceValueObserved -> Processor;
+    DeviceRemoved -> Processor;
+
+    // Processor → Intents
+    Processor -> EnsureDeviceExists;
+    Processor -> UpsertDeviceMetadata;
+    Processor -> RecordMeasurement;
+    Processor -> MarkDeviceRemoved;
+    Processor -> ReactivateDevice;
+
+    // Intents → Storage
+    EnsureDeviceExists -> Storage;
+    UpsertDeviceMetadata -> Storage;
+    RecordMeasurement -> Storage;
+    MarkDeviceRemoved -> Storage;
+    ReactivateDevice -> Storage;
+
+    // Device state transitions
+    implicit -> active [label="DeviceCreated"];
+    active -> removed [label="DeviceRemoved"];
+    removed -> active [label="DeviceValueObserved\nor DeviceCreated"];
+}
