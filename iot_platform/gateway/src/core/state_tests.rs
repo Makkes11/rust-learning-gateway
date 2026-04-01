@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::core::events::GatewayEvent;
-    use crate::core::state::{GatewayState, StateChange, StateError};
+    use crate::core::state::{GatewayState, StateChange};
     use chrono::Utc;
 
     #[tokio::test]
@@ -14,7 +14,7 @@ mod tests {
             id: 1,
             timestamp: ts,
         };
-        let change = state.apply_event(event).unwrap().unwrap();
+        let change = state.apply_event(event).unwrap();
 
         assert_eq!(
             change,
@@ -42,16 +42,16 @@ mod tests {
         let ts_update = Utc::now().timestamp_millis();
         let event = GatewayEvent::DeviceValueObserved {
             id: 1,
-            value: Some(42.0),
+            value: 42.0,
             timestamp: ts_update,
         };
-        let change = state.apply_event(event).unwrap().unwrap();
+        let change = state.apply_event(event).unwrap();
 
         assert_eq!(
             change,
             StateChange::DeviceUpdated {
                 id: 1,
-                value: Some(42.0),
+                value: 42.0,
                 timestamp: ts_update
             }
         );
@@ -75,7 +75,7 @@ mod tests {
             id: 1,
             timestamp: ts_removed,
         };
-        let change = state.apply_event(event).unwrap().unwrap();
+        let change = state.apply_event(event).unwrap();
 
         assert_eq!(
             change,
@@ -85,22 +85,5 @@ mod tests {
             }
         );
         assert!(state.devices.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_device_not_found_error() {
-        let mut state = GatewayState::new();
-        let ts = Utc::now().timestamp_millis();
-
-        let event = GatewayEvent::DeviceValueObserved {
-            id: 999,
-            value: Some(10.0),
-            timestamp: ts,
-        };
-        let err = state.apply_event(event).unwrap_err();
-
-        match err {
-            StateError::DeviceNotFound(id) => assert_eq!(id, 999),
-        }
     }
 }

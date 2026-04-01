@@ -41,10 +41,7 @@ mod tests {
             timestamp: ts,
         };
 
-        let change = state
-            .apply_event(event)
-            .expect("state error")
-            .expect("no change");
+        let change = state.apply_event(event).expect("state error");
 
         dispatcher.dispatch(change).await;
 

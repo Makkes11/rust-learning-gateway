@@ -119,17 +119,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut state = event_state.lock().await;
 
                 match state.apply_event(event) {
-                    Ok(sc) => sc,
-                    Err(e) => {
-                        error!("{}: {}", gateway_name_loop, e);
+                    Some(sc) => sc,
+                    None => {
+                        error!("{}: Failed to apply event", gateway_name_loop);
                         continue;
                     }
                 }
             };
 
-            if let Some(change) = state_change {
-                event_dispatcher.dispatch(change).await;
-            }
+            event_dispatcher.dispatch(state_change).await;
         }
     });
 

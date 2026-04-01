@@ -10,5 +10,5 @@ pub struct Device {
 #[derive(Debug, Deserialize)]
 pub struct DeviceInput {
     pub id: u32,
-    pub value: Option<f64>,
+    pub value: f64,
 }

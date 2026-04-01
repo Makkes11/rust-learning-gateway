@@ -14,7 +14,7 @@ async fn process_events(
 ) {
     while let Ok(event) = rx.try_recv() {
         let mut state_guard = state.lock().await;
-        let _ = state_guard.apply_event(event);
+        state_guard.apply_event(event);
     }
 }
 
@@ -62,7 +62,7 @@ async fn api_endpoints_work() {
         .with_state(app_state);
 
     // TEST 1: Create device via POST /devices (no value)
-    let device_json = r#"{"id":1}"#;
+    let device_json = r#"{"id":1, "value":0.0}"#;
     let request = Request::builder()
         .method("POST")
         .uri("/devices")

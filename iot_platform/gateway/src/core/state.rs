@@ -5,19 +5,9 @@ use tracing::info;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StateChange {
-    DeviceCreated {
-        id: u32,
-        timestamp: i64,
-    },
-    DeviceUpdated {
-        id: u32,
-        value: Option<f64>,
-        timestamp: i64,
-    },
-    DeviceRemoved {
-        id: u32,
-        timestamp: i64,
-    },
+    DeviceCreated { id: u32, timestamp: i64 },
+    DeviceUpdated { id: u32, value: f64, timestamp: i64 },
+    DeviceRemoved { id: u32, timestamp: i64 },
 }
 
 #[async_trait::async_trait]
@@ -26,22 +16,7 @@ pub trait StateListener: Send + Sync + 'static {
     async fn on_event(&self, event: StateChange) -> Result<(), ListenerError>;
 }
 
-#[derive(Debug)]
-pub enum StateError {
-    DeviceNotFound(u32),
-}
-
 use std::fmt;
-
-impl fmt::Display for StateError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            StateError::DeviceNotFound(id) => {
-                write!(f, "Device with id {} not found", id)
-            }
-        }
-    }
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct GatewayState {
@@ -53,51 +28,59 @@ impl GatewayState {
         Self { devices: vec![] }
     }
 
-    pub fn apply_event(&mut self, ev: GatewayEvent) -> Result<Option<StateChange>, StateError> {
+    pub fn apply_event(&mut self, ev: GatewayEvent) -> Option<StateChange> {
         match ev {
             GatewayEvent::DeviceValueObserved {
                 id,
                 value,
                 timestamp,
             } => {
-                let dev = self
-                    .devices
-                    .iter_mut()
-                    .find(|d| d.id == id)
-                    .ok_or(StateError::DeviceNotFound(id))?;
+                let dev = match self.devices.iter_mut().find(|d| d.id == id) {
+                    Some(d) => d,
+                    None => {
+                        self.devices.push(Device {
+                            id,
+                            value: None,
+                            timestamp,
+                        });
+                        self.devices.last_mut().unwrap()
+                    }
+                };
 
-                dev.value = value;
+                dev.value = Some(value);
                 dev.timestamp = timestamp;
-                Ok(Some(StateChange::DeviceUpdated {
+                Some(StateChange::DeviceUpdated {
                     id,
                     value,
                     timestamp,
-                }))
+                })
             }
             GatewayEvent::DeviceRemoved { id, timestamp } => {
-                let pos = self
-                    .devices
-                    .iter()
-                    .position(|d| d.id == id)
-                    .ok_or(StateError::DeviceNotFound(id))?;
+                if let Some(pos) = self.devices.iter().position(|d| d.id == id) {
+                    self.devices.remove(pos);
+                } else {
+                    // If device not found, we can choose to ignore or return an error. Here we ignore.
+                    info!("Attempted to remove non-existent device with id {}", id);
+                }
 
-                self.devices.remove(pos);
-                Ok(Some(StateChange::DeviceRemoved { id, timestamp }))
+                Some(StateChange::DeviceRemoved { id, timestamp })
             }
             GatewayEvent::DeviceCreated { id, timestamp } => {
-                let dev = self.devices.iter().find(|d| d.id == id);
+                let dev = self.devices.iter_mut().find(|d| d.id == id);
 
                 if let Some(device) = dev {
-                    info!("Device with id {} already exists", device.id);
-                    return Ok(None);
+                    // upgrade from implicit to explicit
+                    device.timestamp = timestamp;
+
+                    return Some(StateChange::DeviceCreated { id, timestamp });
                 } else {
                     self.devices.push(Device {
                         id,
                         value: None,
-                        timestamp: timestamp,
+                        timestamp,
                     });
-                    info!("Created Device with id {}", id);
-                    Ok(Some(StateChange::DeviceCreated { id, timestamp }))
+
+                    return Some(StateChange::DeviceCreated { id, timestamp });
                 }
             }
         }

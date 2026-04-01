@@ -27,7 +27,7 @@ pub async fn create_device(
 
     Ok(Json(Device {
         id: payload.id,
-        value: payload.value,
+        value: Some(payload.value),
         timestamp: timestamp,
     }))
 }
@@ -51,7 +51,7 @@ pub async fn update_device(
 
     Ok(Json(Device {
         id: payload.id,
-        value: payload.value,
+        value: Some(payload.value),
         timestamp: timestamp,
     }))
 }

@@ -24,10 +24,7 @@ async fn event_flows_from_state_to_listener() {
         timestamp: ts,
     };
 
-    let change = state
-        .apply_event(event)
-        .expect("state error")
-        .expect("no change");
+    let change = state.apply_event(event).expect("state error");
 
     dispatcher.dispatch(change).await;
 
@@ -51,10 +48,7 @@ async fn event_flows_through_event_loop() {
     };
 
     let mut s = state.lock().await;
-    let change = s
-        .apply_event(event)
-        .expect("state error")
-        .expect("no change");
+    let change = s.apply_event(event).expect("state error");
     drop(s);
 
     dispatcher.dispatch(change).await;
@@ -81,8 +75,7 @@ async fn api_create_device_triggers_state_and_dispatcher() {
                 id: device_id,
                 timestamp: ts_created,
             })
-            .expect("state error")
-            .expect("no change");
+            .expect("state error");
         drop(s);
         dispatcher.dispatch(change).await;
     }
@@ -95,11 +88,10 @@ async fn api_create_device_triggers_state_and_dispatcher() {
         let change = s
             .apply_event(GatewayEvent::DeviceValueObserved {
                 id: device_id,
-                value: Some(new_value),
+                value: new_value,
                 timestamp: ts_updated,
             })
-            .expect("state error")
-            .expect("no change");
+            .expect("state error");
         drop(s);
         dispatcher.dispatch(change).await;
     }

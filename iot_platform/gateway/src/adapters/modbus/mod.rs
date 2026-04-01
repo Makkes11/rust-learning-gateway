@@ -48,7 +48,7 @@ impl ModbusPoller {
             self.tx
                 .send(GatewayEvent::DeviceValueObserved {
                     id: mapping.device_id,
-                    value: Some(scaled_value),
+                    value: scaled_value,
                     timestamp: chrono::Utc::now().timestamp_millis(),
                 })
                 .await?;
