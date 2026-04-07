@@ -11,7 +11,7 @@ mod tests {
         let ts = Utc::now().timestamp_millis();
 
         let event = GatewayEvent::DeviceCreated {
-            id: 1,
+            id: "1".to_string(),
             timestamp: ts,
         };
         let change = state.apply_event(event).unwrap();
@@ -19,12 +19,12 @@ mod tests {
         assert_eq!(
             change,
             StateChange::DeviceCreated {
-                id: 1,
+                id: "1".to_string(),
                 timestamp: ts
             }
         );
         assert_eq!(state.devices.len(), 1);
-        assert_eq!(state.devices[0].id, 1);
+        assert_eq!(state.devices[0].id, "1".to_string());
         assert_eq!(state.devices[0].timestamp, ts);
     }
 
@@ -34,14 +34,14 @@ mod tests {
         let ts_created = Utc::now().timestamp_millis();
         state
             .apply_event(GatewayEvent::DeviceCreated {
-                id: 1,
+                id: "1".to_string(),
                 timestamp: ts_created,
             })
             .unwrap();
 
         let ts_update = Utc::now().timestamp_millis();
         let event = GatewayEvent::DeviceValueObserved {
-            id: 1,
+            id: "1".to_string(),
             value: 42.0,
             timestamp: ts_update,
         };
@@ -50,7 +50,7 @@ mod tests {
         assert_eq!(
             change,
             StateChange::DeviceUpdated {
-                id: 1,
+                id: "1".to_string(),
                 value: 42.0,
                 timestamp: ts_update
             }
@@ -65,14 +65,14 @@ mod tests {
         let ts_created = Utc::now().timestamp_millis();
         state
             .apply_event(GatewayEvent::DeviceCreated {
-                id: 1,
+                id: "1".to_string(),
                 timestamp: ts_created,
             })
             .unwrap();
 
         let ts_removed = Utc::now().timestamp_millis();
         let event = GatewayEvent::DeviceRemoved {
-            id: 1,
+            id: "1".to_string(),
             timestamp: ts_removed,
         };
         let change = state.apply_event(event).unwrap();
@@ -80,7 +80,7 @@ mod tests {
         assert_eq!(
             change,
             StateChange::DeviceRemoved {
-                id: 1,
+                id: "1".to_string(),
                 timestamp: ts_removed
             }
         );

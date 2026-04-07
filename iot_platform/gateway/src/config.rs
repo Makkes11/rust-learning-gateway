@@ -19,7 +19,7 @@ pub struct MqttConfig {
 pub struct RegisterMapping {
     pub address: u16,
     pub count: u16,
-    pub device_id: u32,
+    pub device_id: String,
     pub scale: f64,
 }
 
@@ -98,13 +98,13 @@ impl Default for Config {
                     RegisterMapping {
                         address: 0,
                         count: 1,
-                        device_id: 1,
+                        device_id: "1".into(),
                         scale: 1.0,
                     },
                     RegisterMapping {
                         address: 5,
                         count: 2,
-                        device_id: 2,
+                        device_id: "2".into(),
                         scale: 0.1,
                     },
                 ],

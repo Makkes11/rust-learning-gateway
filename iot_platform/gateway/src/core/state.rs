@@ -5,14 +5,24 @@ use tracing::info;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StateChange {
-    DeviceCreated { id: u32, timestamp: i64 },
-    DeviceUpdated { id: u32, value: f64, timestamp: i64 },
-    DeviceRemoved { id: u32, timestamp: i64 },
+    DeviceCreated {
+        id: String,
+        timestamp: i64,
+    },
+    DeviceUpdated {
+        id: String,
+        value: f64,
+        timestamp: i64,
+    },
+    DeviceRemoved {
+        id: String,
+        timestamp: i64,
+    },
 }
 
 #[async_trait::async_trait]
 pub trait StateListener: Send + Sync + 'static {
-    // Methods now return Result to allow for centralized error reporting
+    // Methods return Result to allow for centralized error reporting
     async fn on_event(&self, event: StateChange) -> Result<(), ListenerError>;
 }
 
@@ -39,7 +49,7 @@ impl GatewayState {
                     Some(d) => d,
                     None => {
                         self.devices.push(Device {
-                            id,
+                            id: id.clone(),
                             value: None,
                             timestamp,
                         });
@@ -50,7 +60,7 @@ impl GatewayState {
                 dev.value = Some(value);
                 dev.timestamp = timestamp;
                 Some(StateChange::DeviceUpdated {
-                    id,
+                    id: id.clone(),
                     value,
                     timestamp,
                 })
@@ -69,18 +79,20 @@ impl GatewayState {
                 let dev = self.devices.iter_mut().find(|d| d.id == id);
 
                 if let Some(device) = dev {
-                    // upgrade from implicit to explicit
                     device.timestamp = timestamp;
 
                     return Some(StateChange::DeviceCreated { id, timestamp });
                 } else {
                     self.devices.push(Device {
-                        id,
+                        id: id.clone(),
                         value: None,
                         timestamp,
                     });
 
-                    return Some(StateChange::DeviceCreated { id, timestamp });
+                    return Some(StateChange::DeviceCreated {
+                        id: id.clone(),
+                        timestamp,
+                    });
                 }
             }
         }

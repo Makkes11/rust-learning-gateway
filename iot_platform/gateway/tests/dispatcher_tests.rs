@@ -37,7 +37,7 @@ mod tests {
         let ts = Utc::now().timestamp_millis();
 
         let event = GatewayEvent::DeviceCreated {
-            id: 1,
+            id: "1".into(),
             timestamp: ts,
         };
 

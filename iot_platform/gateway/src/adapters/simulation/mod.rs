@@ -30,9 +30,9 @@ impl Lifecycle for SimulationPoller {
             loop {
                 select! {
                     _ = sleep(Duration::from_millis(self.config.interval_ms)) => {
-                        for device_id in 1..=2 { // Dummy snapshot: IDs 1..2, kann später dynamisch
+                        for device_id in 1..=2 { // Simulate 2 devices
                             let _ = tx.send(GatewayEvent::DeviceValueObserved {
-                                id: device_id,
+                                id: device_id.to_string(),
                                 value: rand::random::<f64>() * 100.0 + self.config.add_value as f64,
                                 timestamp: chrono::Utc::now().timestamp_millis(),
                             }).await;

@@ -65,7 +65,7 @@ mod tests {
 
         dispatcher
             .dispatch(StateChange::DeviceCreated {
-                id: 1,
+                id: "1".to_string(),
                 timestamp: chrono::Utc::now().timestamp_millis(),
             })
             .await;

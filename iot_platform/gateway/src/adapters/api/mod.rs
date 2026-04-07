@@ -19,7 +19,7 @@ pub async fn create_device(
 
     app.tx
         .send(GatewayEvent::DeviceCreated {
-            id: payload.id,
+            id: payload.id.clone(),
             timestamp: timestamp,
         })
         .await
@@ -42,7 +42,7 @@ pub async fn update_device(
 
     app.tx
         .send(GatewayEvent::DeviceValueObserved {
-            id: payload.id,
+            id: payload.id.clone(),
             value: payload.value,
             timestamp: timestamp,
         })
@@ -50,7 +50,7 @@ pub async fn update_device(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(Device {
-        id: payload.id,
+        id: payload.id.clone(),
         value: Some(payload.value),
         timestamp: timestamp,
     }))
@@ -58,7 +58,7 @@ pub async fn update_device(
 
 pub async fn delete_device(
     State(app): State<AppState>,
-    Path(id): Path<u32>,
+    Path(id): Path<String>,
 ) -> Result<StatusCode, StatusCode> {
     info!("API: Deleting device id={}", id);
 

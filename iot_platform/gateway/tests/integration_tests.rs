@@ -20,7 +20,7 @@ async fn event_flows_from_state_to_listener() {
     let mut state = GatewayState::new();
     let ts = Utc::now().timestamp_millis();
     let event = GatewayEvent::DeviceCreated {
-        id: 1,
+        id: "1".into(),
         timestamp: ts,
     };
 
@@ -43,7 +43,7 @@ async fn event_flows_through_event_loop() {
     let state = Arc::new(Mutex::new(GatewayState::new()));
 
     let event = GatewayEvent::DeviceCreated {
-        id: 42,
+        id: "42".into(),
         timestamp: Utc::now().timestamp_millis(),
     };
 
@@ -66,13 +66,13 @@ async fn api_create_device_triggers_state_and_dispatcher() {
     let dispatcher = Dispatcher::new(vec![listener]);
 
     // Device Created Event
-    let device_id = 42;
+    let device_id = "42".to_string();
     let ts_created = Utc::now().timestamp_millis();
     {
         let mut s = state.lock().await;
         let change = s
             .apply_event(GatewayEvent::DeviceCreated {
-                id: device_id,
+                id: device_id.clone(),
                 timestamp: ts_created,
             })
             .expect("state error");
@@ -87,7 +87,7 @@ async fn api_create_device_triggers_state_and_dispatcher() {
         let mut s = state.lock().await;
         let change = s
             .apply_event(GatewayEvent::DeviceValueObserved {
-                id: device_id,
+                id: device_id.clone(),
                 value: new_value,
                 timestamp: ts_updated,
             })

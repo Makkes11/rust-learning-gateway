@@ -80,7 +80,7 @@ async fn api_endpoints_work() {
     {
         let state_guard = state.lock().await;
         assert_eq!(state_guard.devices.len(), 1);
-        assert_eq!(state_guard.devices[0].id, 1);
+        assert_eq!(state_guard.devices[0].id, "1".to_string());
         assert_eq!(state_guard.devices[0].value, None);
     }
 
@@ -121,7 +121,7 @@ async fn api_endpoints_work() {
     {
         let state_guard = state.lock().await;
         assert_eq!(state_guard.devices.len(), 1);
-        assert_eq!(state_guard.devices[0].id, 1);
+        assert_eq!(state_guard.devices[0].id, "1".to_string());
         assert_eq!(state_guard.devices[0].value, Some(56.78));
     }
 
