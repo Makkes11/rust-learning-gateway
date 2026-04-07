@@ -27,6 +27,7 @@ This gateway connects industrial devices through a deterministic, event-driven a
 - Configuration-driven operation
 
 ## Architecture
+
 ```
 External Adapters (API, Modbus, Simulation)
             ↓
@@ -43,10 +44,11 @@ External Adapters (API, Modbus, Simulation)
 
 **Key Components:**
 
-- **core/** - Domain logic and state management
+- **core/** - Domain logic, state management, event dispatcher
 - **adapters/** - External interfaces (API, Modbus, MQTT, Simulation)
-- **transport/** - Event transport layer
+- **logging/** - Structured logging listeners
 - **config.rs** - Configuration loading
+- **shared_models** - Shared crate for cross-service domain types (TelemetryMessage, DeviceContext)
 
 ## Quick Start
 
@@ -57,10 +59,11 @@ External Adapters (API, Modbus, Simulation)
 - Optional: MQTT broker (e.g., Mosquitto)
 
 ### Installation
+
 ```bash
 git clone <repository-url>
-cd gateway
-cargo run
+cd rust-learning-gateway/iot_platform
+cargo run -p gateway
 ```
 
 Server starts on `http://127.0.0.1:8080`
@@ -79,11 +82,13 @@ docker run -p 8080:8080 rust-gateway
 ```
 
 **Services included:**
+
 - **Gateway**: Main application on port 8080
 - **MQTT Broker** (Eclipse Mosquitto): Port 1883
 - **Modbus Simulator**: Port 5020
 
 **Access:**
+
 - API: `http://localhost:8080`
 - MQTT: `localhost:1883`
 - Modbus: `localhost:5020`
@@ -91,6 +96,7 @@ docker run -p 8080:8080 rust-gateway
 ## Configuration
 
 Edit `config.toml`:
+
 ```toml
 mode = "Modbus" # or "Simulation"
 
@@ -119,6 +125,7 @@ scale = 0.1
 interval_ms = 2000
 add_value = 1
 ```
+
 **Notes:**
 
 - Data source selection is controlled via `mode`.
@@ -126,6 +133,7 @@ add_value = 1
 - No runtime enable/disable flags are used.
 
 ## Source Layout
+
 ```
 src/
 ├── adapters/            # External interfaces
@@ -136,14 +144,17 @@ src/
 │   └── spawn_service.rs # Lifecycle task spawning
 │
 ├── core/                # Domain and state logic
-│   ├── device.rs
-│   ├── dispatcher.rs
-│   ├── lifecycle.rs
-│   └── state.rs
+│   ├── bootstrap.rs     # Application startup orchestration
+│   ├── device.rs        # Device model
+│   ├── dispatcher.rs    # Single-writer event dispatcher
+│   ├── events.rs        # GatewayEvent definitions
+│   ├── lifecycle.rs     # Lifecycle management
+│   ├── state.rs         # GatewayState and mutations
+│   └── state_tests.rs   # Unit tests for state logic
 │
-├── logging/             # Logging listeners
-├── transport/           # Event transport abstractions
+├── logging/             # Structured logging listeners
 ├── config.rs            # Configuration model + loading
+├── lib.rs               # Library root
 └── main.rs              # Application bootstrap
 ```
 
@@ -170,6 +181,7 @@ src/
 - MQTT is treated as a side-effect listener, never a source of truth
 
 ### Example Usage
+
 ```bash
 # Create device with value
 curl -X POST http://127.0.0.1:8080/devices \
@@ -244,27 +256,33 @@ Simulation mode acts as a controlled data source for development and testing. It
 The project includes both unit tests in the source code and integration tests for API endpoints.
 
 **Running tests:**
+
 ```bash
 cargo test
 ```
 
 **Test coverage:**
+
 - `src/core/state_tests.rs` - Unit tests for event application and state mutations
-- `src/core/dispatcher_tests.rs` - Dispatcher event processing tests
+- `tests/dispatcher_tests.rs` - Dispatcher event processing tests
 - `tests/api_endpoints.rs` - Integration tests for REST API (create, read, update, delete)
+- `tests/integration_tests.rs` - End-to-end integration tests
 
 **Current test results:**
+
 - Core state management: 5 tests
 - API endpoint integration: 4 test scenarios (create, read, update, delete)
 
 **Example test scenario:**
 The `api_endpoints_work` test validates the complete lifecycle:
+
 1. Create a device via `POST /devices` with value
 2. Retrieve device via `GET /devices` and verify value
 3. Update device via `PUT /devices/{id}` with new value
 4. Delete device via `DELETE /devices/{id}` and verify removal
 
 **Planned improvements:**
+
 - Performance testing under sustained load
 - Chaos testing for network failures
 - MQTT listener integration tests
