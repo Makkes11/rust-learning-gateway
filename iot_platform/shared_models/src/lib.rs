@@ -5,7 +5,7 @@ pub struct DeviceContext {
     pub gateway_id: String,
     pub gateway_name: String,
     pub device_name: String,
-    pub device_id: u32,
+    pub device_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -22,7 +22,7 @@ pub struct DeviceCreatedPayload {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeviceValueObservedPayload {
     pub ctx: DeviceContext,
-    pub value: Option<f64>,
+    pub value: f64,
     pub meta: Metadata,
 }
 
@@ -30,4 +30,11 @@ pub struct DeviceValueObservedPayload {
 pub struct DeviceRemovedPayload {
     pub ctx: DeviceContext,
     pub meta: Metadata,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum TelemetryMessage {
+    DeviceCreated(DeviceCreatedPayload),
+    DeviceValueObserved(DeviceValueObservedPayload),
+    DeviceRemoved(DeviceRemovedPayload),
 }
