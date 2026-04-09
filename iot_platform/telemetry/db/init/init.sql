@@ -6,17 +6,23 @@ CREATE TABLE IF NOT EXISTS gateways (
 
 -- devices table
 CREATE TABLE IF NOT EXISTS devices (
-    id SERIAL PRIMARY KEY,
-    gateway_id TEXT NOT NULL REFERENCES gateways(id),
-    name TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    removed_at TIMESTAMP
+    gateway_id TEXT NOT NULL,
+    id TEXT NOT NULL,
+    name TEXT,
+    created_at TIMESTAMP,
+    removed_at TIMESTAMP,
+    last_seen TIMESTAMP,
+    PRIMARY KEY (gateway_id, id),
+    FOREIGN KEY (gateway_id) REFERENCES gateways(id)
 );
 
 -- device_values table
 CREATE TABLE IF NOT EXISTS device_values (
-    device_id INT NOT NULL REFERENCES devices(id),
-    timestamp TIMESTAMP NOT NULL,
+    gateway_id TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    "timestamp" TIMESTAMP NOT NULL,
     value DOUBLE PRECISION NOT NULL,
-    PRIMARY KEY (device_id, timestamp)
+    PRIMARY KEY (gateway_id, device_id, "timestamp"),
+    FOREIGN KEY (gateway_id, device_id)
+        REFERENCES devices(gateway_id, id)
 );
