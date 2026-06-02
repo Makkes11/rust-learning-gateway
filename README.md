@@ -30,13 +30,13 @@ rust-learning-gateway/
 
 Daily exercises focused on core Rust concepts:
 
-- **Ownership & Borrowing** — Memory management and the borrow checker
-- **Lifetimes** — Explicit lifetime annotations
-- **Enums & Pattern Matching** — Type-safe data modeling
-- **Error Handling** — `Result<T, E>` and `Option<T>` patterns
-- **Traits** — Polymorphism and code reuse
-- **Testing** — Unit and integration tests
-- **State Machines** — Type-state pattern implementation
+- **Ownership & Borrowing** - Memory management and the borrow checker
+- **Lifetimes** - Explicit lifetime annotations
+- **Enums & Pattern Matching** - Type-safe data modeling
+- **Error Handling** - `Result<T, E>` and `Option<T>` patterns
+- **Traits** - Polymorphism and code reuse
+- **Testing** - Unit and integration tests
+- **State Machines** - Type-state pattern implementation
 
 Each day is a self-contained exercise exploring a specific concept.
 
